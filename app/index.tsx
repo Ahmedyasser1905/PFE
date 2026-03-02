@@ -19,26 +19,30 @@ export default function LoginScreen() {
     const { login, user, loading: authLoading, getInitialRoute } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-        if (user && !authLoading) {
-            router.replace(getInitialRoute());
-        }
-    }, [user, authLoading]);
 
     const handleLogin = async () => {
-        if (!email || !password) return;
+        console.log('[Login] handleLogin started', { email });
+        if (!email || !password) {
+            console.warn('[Login] Missing email or password');
+            return;
+        }
 
         try {
             setLoading(true);
+            console.log('[Login] Calling authApi.login...');
             const response = await authApi.login({ email, password });
-            console.log('Login success:', response.data);
-            await login(response.data);
-            router.replace(getInitialRoute(response.data.role));
+            console.log('[Login] Login success:', response.data);
+            const { user, token } = response.data;
+            await login(user, token);
+            const initialRoute = getInitialRoute();
+            console.log('[Login] Navigating to:', initialRoute);
+            router.replace(initialRoute);
         } catch (error: any) {
-            console.error('Login failed:', error.response?.data?.message || error.message);
+            console.error('[Login] Login failed:', error.response?.data?.message || error.message);
             alert('Login failed: ' + (error.response?.data?.message || 'Server error'));
         } finally {
             setLoading(false);
+            console.log('[Login] handleLogin finished');
         }
     };
 
@@ -70,6 +74,11 @@ export default function LoginScreen() {
                         <View style={styles.passwordContainer}>
                             <View style={styles.passwordHeader}>
                                 <Text style={styles.label}>Password</Text>
+                                <Link href="/forgot-password" asChild>
+                                    <Pressable>
+                                        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                                    </Pressable>
+                                </Link>
                             </View>
                             <BaseInput
                                 label="Password"

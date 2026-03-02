@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
@@ -44,16 +44,15 @@ export default function RegisterScreen() {
 
         try {
             setLoading(true);
-            console.log('📤 Sending registration request to:', authApi.register);
             const response = await authApi.register({ fullName, email, password });
-            console.log('✅ Registration success:', response.data);
-            await login(response.data);
-            alert('Account created successfully!');
-            router.replace(getInitialRoute(response.data.role));
+            Alert.alert(
+                'Verify your email',
+                response.data.message || 'Please check your email to verify your account.',
+                [{ text: 'OK', onPress: () => router.replace('/') }]
+            );
         } catch (error: any) {
-            console.error('❌ Registration failed:', error.response?.data?.message || error.message);
-            const errorMsg = error.response?.data?.message || (error.code === 'ECONNABORTED' ? 'Request timed out' : error.message);
-            alert('Registration failed: ' + errorMsg);
+            console.error('Registration failed:', error.response?.data?.message || error.message);
+            Alert.alert('Registration failed', error.response?.data?.message || 'Server error');
         } finally {
             setLoading(false);
         }

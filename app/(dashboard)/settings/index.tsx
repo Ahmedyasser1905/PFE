@@ -22,8 +22,14 @@ export default function ProfileSettings() {
     const { user, logout } = useAuth();
 
     const handleLogout = async () => {
-        await logout();
-        router.replace('/');
+        console.log('[Settings] handleLogout triggered');
+        try {
+            await logout();
+            console.log('[Settings] logout() successful');
+            // Redirection is now handled by the centralized AuthGuard in AuthContext
+        } catch (error) {
+            console.error('[Settings] Logout error:', error);
+        }
     };
 
     const menuItems = [

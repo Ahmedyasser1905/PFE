@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { storage } from '../utils/storage';
 
 interface User {
     _id: string;
@@ -12,9 +12,9 @@ interface User {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (userData: User) => Promise<void>;
+    login: (userData: User, token: string) => Promise<void>;
     logout: () => Promise<void>;
-    getInitialRoute: (role?: string) => string;
+    getInitialRoute: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,55 +24,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadUser();
+        const loadInitialData = async () => {
+            try {
+                const storedUser = await storage.getItem('userData');
+                const token = await storage.getItem('userToken');
+
+                if (storedUser && token) {
+                    setUser(JSON.parse(storedUser));
+                }
+            } catch (error) {
+                console.error('[AuthContext] Error loading initial auth data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadInitialData();
     }, []);
 
-    const loadUser = async () => {
+    const login = useMemo(() => async (userData: User, token: string) => {
         try {
-            // Extra safe check for native modules in some environments
-            const storedUser = await AsyncStorage.getItem('user');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        } catch (e) {
-            // Silently fail if storage is not available - memory state is enough
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const login = async (userData: User) => {
-        try {
+            await storage.setItem('userData', JSON.stringify(userData));
+            await storage.setItem('userToken', token);
             setUser(userData);
-            if (AsyncStorage) {
-                await AsyncStorage.setItem('user', JSON.stringify(userData));
-            }
-        } catch (e) {
-            console.warn('Failed to persist user to storage', e);
+        } catch (error) {
+            console.error('[AuthContext] Login persistence failed:', error);
         }
-    };
+    }, [setUser]);
 
-    const logout = async () => {
+    const logout = useMemo(() => async () => {
+        console.log('[AuthContext] Logging out...');
         try {
-            setUser(null);
-            if (AsyncStorage) {
-                await AsyncStorage.removeItem('user');
-            }
-        } catch (e) {
-            console.warn('Failed to remove user from storage', e);
-        }
-    };
+            // Clear storage FIRST to prevent race conditions on reload
+            await storage.deleteItem('userData');
+            await storage.deleteItem('userToken');
 
-    const getInitialRoute = (role?: string) => {
-        const userRole = role || user?.role;
-        if (userRole) {
-            return '/(dashboard)';
+            // Then update state to trigger UI changes
+            setUser(null);
+            console.log('[AuthContext] Logout complete (state cleared)');
+        } catch (error) {
+            console.error('[AuthContext] Logout failed to clear storage:', error);
         }
-        return '/';
-    };
+    }, [setUser]);
+
+    const getInitialRoute = useMemo(() => () => {
+        return '/(dashboard)';
+    }, []);
+
+    const value = useMemo(() => ({
+        user,
+        loading,
+        login,
+        logout,
+        getInitialRoute
+    }), [user, loading, login, logout, getInitialRoute]);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, getInitialRoute }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
@@ -80,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (context === undefined) {
+    if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;

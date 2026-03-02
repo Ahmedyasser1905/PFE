@@ -1,8 +1,21 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { LayoutDashboard, HardHat, Calculator, Settings } from 'lucide-react-native';
 import { theme } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardLayout() {
+    const { user, loading } = useAuth();
+
+    if (loading || !user) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+        );
+    }
+
     return (
         <Tabs
             screenOptions={{
