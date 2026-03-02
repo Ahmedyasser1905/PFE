@@ -2,6 +2,12 @@
 
 # dependencies
 node_modules/
+server/node_modules/
+
+# env
+.env
+.env.local
+server/.env
 
 # Expo
 .expo/
