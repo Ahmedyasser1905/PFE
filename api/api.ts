@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { storage } from '../utils/storage';
 
 // REPLACE THIS with your final Vercel URL (e.g., https://buildest-server.vercel.app/api)
-const PRODUCTION_URL = 'https://YOUR_PROJECT_NAME.vercel.app/api';
+const PRODUCTION_URL = 'https://buildest-server-4hb2szff0-ahmeds-projects-7b24d0cd.vercel.app/api';
 
 const getBaseUrl = async () => {
     // 1. Check for custom server URL (from the Globe icon modal)
