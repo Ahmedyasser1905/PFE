@@ -10,9 +10,9 @@ import {
     FileText
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { BaseInput } from '../../../components/BaseInput';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseInput } from '../../components/BaseInput';
+import { BaseButton } from '../../components/BaseButton';
 
 export default function CreateProject() {
     const router = useRouter();
@@ -165,3 +165,4 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
 });
+

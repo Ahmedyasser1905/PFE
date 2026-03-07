@@ -10,10 +10,11 @@ import {
     Calculator,
     HardHat,
     Layers,
-    Sparkles
+    Sparkles,
+    ArrowLeft
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../constants/theme';
 
 const CATEGORIES = [
     {
@@ -22,9 +23,9 @@ const CATEGORIES = [
         icon: HardHat,
         color: '#1e40af',
         items: [
-            { name: 'Concrete Calculator', route: '/(dashboard)/calculations/concrete' },
-            { name: 'Foundation Calculator', route: '/(dashboard)/calculations/foundation' },
-            { name: 'Structural Materials', route: '/(dashboard)/calculations/structural' },
+            { name: 'Concrete Calculator', route: '/calculations/concrete' },
+            { name: 'Foundation Calculator', route: '/calculations/foundation' },
+            { name: 'Structural Materials', route: '/calculations/structural' },
         ]
     },
     {
@@ -33,8 +34,8 @@ const CATEGORIES = [
         icon: PaintBucket,
         color: '#b91c1c',
         items: [
-            { name: 'Paint & Plaster', route: '/(dashboard)/calculations/finishes' },
-            { name: 'Tiles & Ceramics', route: '/(dashboard)/calculations/finishes' },
+            { name: 'Paint & Plaster', route: '/calculations/finishes' },
+            { name: 'Tiles & Ceramics', route: '/calculations/finishes' },
         ]
     },
     {
@@ -43,8 +44,8 @@ const CATEGORIES = [
         icon: DoorOpen,
         color: '#047857',
         items: [
-            { name: 'Doors Estimation', route: '/(dashboard)/calculations/openings' },
-            { name: 'Windows Estimation', route: '/(dashboard)/calculations/openings' },
+            { name: 'Doors Estimation', route: '/calculations/openings' },
+            { name: 'Windows Estimation', route: '/calculations/openings' },
         ]
     },
     {
@@ -53,8 +54,8 @@ const CATEGORIES = [
         icon: Layout,
         color: '#7c3aed',
         items: [
-            { name: 'Flooring Calculator', route: '/(dashboard)/calculations/interior' },
-            { name: 'Ceiling Materials', route: '/(dashboard)/calculations/interior' },
+            { name: 'Flooring Calculator', route: '/calculations/interior' },
+            { name: 'Ceiling Materials', route: '/calculations/interior' },
         ]
     }
 ];
@@ -65,11 +66,18 @@ export default function CalculationsLauncher() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <Text style={styles.title}>Calculations</Text>
-                <Text style={styles.subtitle}>Professional engineering estimators</Text>
+                <TouchableOpacity
+                    onPress={() => router.push('/')}
+                    style={styles.backBtnVisible}
+                    activeOpacity={0.8}
+                >
+                    <ArrowLeft size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.titleText}>Calculations</Text>
+                <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {CATEGORIES.map((category) => (
                     <View key={category.id} style={styles.categorySection}>
                         <View style={styles.categoryHeader}>
@@ -121,20 +129,36 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     header: {
-        padding: theme.spacing.xl,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: 10,
+        paddingBottom: 15,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
+        zIndex: 100,
     },
-    title: {
-        fontSize: 28,
+    backBtnVisible: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.colors.border + '50',
+    },
+    titleText: {
+        fontSize: 20,
         fontWeight: '800',
         color: theme.colors.text,
+        textAlign: 'center',
+        flex: 1,
+        marginLeft: -20,
     },
-    subtitle: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        marginTop: 4,
+    scrollContent: {
+        paddingBottom: 40,
     },
     content: {
         padding: theme.spacing.xl,
@@ -237,3 +261,4 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
     }
 });
+

@@ -17,6 +17,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.buildest.app",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -29,6 +31,14 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7e256e29-329b-491d-a496-65f326ea56a9"
+      }
+    }
   }
 }

@@ -8,10 +8,11 @@ import {
     Clock,
     MapPin,
     ChevronRight,
-    MoreVertical
+    MoreVertical,
+    ArrowLeft
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../constants/theme';
 
 export default function MyProjects() {
     const router = useRouter();
@@ -47,13 +48,19 @@ export default function MyProjects() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>My Projects</Text>
-                    <Text style={styles.subtitle}>Manage your active constructions</Text>
+                <TouchableOpacity
+                    onPress={() => router.push('/')}
+                    style={styles.backBtnVisible}
+                    activeOpacity={0.8}
+                >
+                    <ArrowLeft size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: 16 }}>
+                    <Text style={styles.titleText}>My Projects</Text>
                 </View>
                 <TouchableOpacity
                     style={styles.addBtn}
-                    onPress={() => router.push('/(dashboard)/projects/create')}
+                    onPress={() => router.push('/projects/create')}
                 >
                     <Plus size={24} color="white" />
                 </TouchableOpacity>
@@ -74,7 +81,7 @@ export default function MyProjects() {
                     <TouchableOpacity
                         key={project.id}
                         style={styles.projectCard}
-                        onPress={() => router.push(`/(dashboard)/projects/${project.id}`)}
+                        onPress={() => router.push(`/projects/${project.id}`)}
                     >
                         <View style={styles.cardHeader}>
                             <View style={styles.projectMain}>
@@ -129,13 +136,27 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: theme.spacing.xl,
+        justifyContent: 'space-between',
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: 10,
+        paddingBottom: 15,
         backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+        zIndex: 100,
     },
-    title: {
-        fontSize: 28,
+    backBtnVisible: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.colors.border + '50',
+    },
+    titleText: {
+        fontSize: 20,
         fontWeight: '800',
         color: theme.colors.text,
     },
@@ -286,3 +307,4 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 });
+

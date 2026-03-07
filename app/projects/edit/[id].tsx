@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Building2, MapPin, Briefcase, Calendar } from 'lucide-react-native';
-import { theme } from '../../../../constants/theme';
-import { BaseInput } from '../../../../components/BaseInput';
-import { BaseButton } from '../../../../components/BaseButton';
+import { theme } from '../../../constants/theme';
+import { BaseInput } from '../../../components/BaseInput';
+import { BaseButton } from '../../../components/BaseButton';
 
 export default function EditProject() {
     const { id } = useLocalSearchParams();

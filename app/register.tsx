@@ -66,7 +66,7 @@ export default function RegisterScreen() {
             >
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.header}>
-                        <Logo size="md" />
+                        {/* Logo removed per user request */}
                     </View>
 
                     <View style={styles.content}>
@@ -117,7 +117,7 @@ export default function RegisterScreen() {
                                 {agreed && <View style={styles.checkboxInner} />}
                             </View>
                             <Text style={styles.agreeText}>
-                                I agree to the <Text style={styles.linkTextInline}>Terms and Conditions</Text> and <Text style={styles.linkTextInline}>Privacy Policy</Text>.
+                                I agree to the <Text style={styles.linkTextInline} onPress={() => router.push('/terms')}>Terms and Conditions</Text> and <Text style={styles.linkTextInline} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
                             </Text>
                         </Pressable>
 
@@ -131,7 +131,7 @@ export default function RegisterScreen() {
 
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>Already have an account? </Text>
-                            <Link href="/" asChild>
+                            <Link href="/login" asChild>
                                 <Pressable>
                                     <Text style={styles.linkText}>Login</Text>
                                 </Pressable>
@@ -237,3 +237,4 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
     },
 });
+

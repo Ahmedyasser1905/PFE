@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Ruler, Calculator as CalcIcon, RefreshCcw, Landmark } from 'lucide-react-native';
+import { ArrowLeft, Box, Calculator as CalcIcon, RefreshCcw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { BaseInput } from '../../../components/BaseInput';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseInput } from '../../components/BaseInput';
+import { BaseButton } from '../../components/BaseButton';
 
-export default function FoundationCalculator() {
+export default function ConcreteCalculator() {
     const router = useRouter();
-    const [depth, setDepth] = useState('');
-    const [perimeter, setPerimeter] = useState('');
+    const [length, setLength] = useState('');
     const [width, setWidth] = useState('');
+    const [thickness, setThickness] = useState('');
     const [result, setResult] = useState<number | null>(null);
 
     const calculate = () => {
-        const d = parseFloat(depth);
-        const p = parseFloat(perimeter);
+        const l = parseFloat(length);
         const w = parseFloat(width);
-        if (d && p && w) {
-            setResult(d * p * w);
+        const t = parseFloat(thickness);
+        if (l && w && t) {
+            setResult(l * w * t);
         }
     };
 
@@ -29,40 +29,40 @@ export default function FoundationCalculator() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <ArrowLeft size={24} color={theme.colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Foundation Calc</Text>
+                <Text style={styles.title}>Concrete Calculator</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.card}>
-                    <Text style={styles.label}>Excavation Details (m)</Text>
+                    <Text style={styles.label}>Slab Dimensions (m)</Text>
                     <BaseInput
-                        label="Total Perimeter"
+                        label="Length"
                         placeholder="0.00"
-                        value={perimeter}
-                        onChangeText={setPerimeter}
-                        icon={Ruler}
+                        value={length}
+                        onChangeText={setLength}
+                        icon={Box}
                         keyboardType="numeric"
                     />
                     <BaseInput
-                        label="Footing Width"
+                        label="Width"
                         placeholder="0.00"
                         value={width}
                         onChangeText={setWidth}
-                        icon={Landmark}
+                        icon={Box}
                         keyboardType="numeric"
                     />
                     <BaseInput
-                        label="Depth"
+                        label="Thickness"
                         placeholder="0.00"
-                        value={depth}
-                        onChangeText={setDepth}
-                        icon={Ruler}
+                        value={thickness}
+                        onChangeText={setThickness}
+                        icon={Box}
                         keyboardType="numeric"
                     />
 
                     <BaseButton
-                        title="Estimate Excavation"
+                        title="Calculate Volume"
                         onPress={calculate}
                         icon={CalcIcon}
                         style={styles.calcBtn}
@@ -72,21 +72,25 @@ export default function FoundationCalculator() {
                 {result !== null && (
                     <View style={styles.resultCard}>
                         <View style={styles.resultHeader}>
-                            <Text style={styles.resultLabel}>Soil Volume to Remove</Text>
+                            <Text style={styles.resultLabel}>Estimated Volume</Text>
                             <TouchableOpacity onPress={() => setResult(null)}>
                                 <RefreshCcw size={18} color={theme.colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
                         <Text style={styles.resultValue}>{result.toFixed(2)} m³</Text>
                         <View style={styles.divider} />
-                        <Text style={styles.breakdownTitle}>Estimated Logistics:</Text>
+                        <Text style={styles.breakdownTitle}>Approximate Mix (M25):</Text>
                         <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Dumping Truck Trips</Text>
-                            <Text style={styles.breakdownValue}>{Math.ceil(result / 10)}</Text>
+                            <Text style={styles.breakdownLabel}>Cement (bags)</Text>
+                            <Text style={styles.breakdownValue}>{(result * 8.5).toFixed(0)}</Text>
                         </View>
                         <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownLabel}>Man Hours (Approx.)</Text>
-                            <Text style={styles.breakdownValue}>{(result * 0.8).toFixed(1)} h</Text>
+                            <Text style={styles.breakdownLabel}>Sand (m³)</Text>
+                            <Text style={styles.breakdownValue}>{(result * 0.45).toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.breakdownRow}>
+                            <Text style={styles.breakdownLabel}>Aggregates (m³)</Text>
+                            <Text style={styles.breakdownValue}>{(result * 0.9).toFixed(2)}</Text>
                         </View>
                     </View>
                 )}
@@ -96,7 +100,7 @@ export default function FoundationCalculator() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fdf2f8' }, // Slight pink tint for foundation
+    container: { flex: 1, backgroundColor: '#f8fafc' },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -117,10 +121,10 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.border,
     },
     label: { fontSize: 16, fontWeight: '700', marginBottom: 20, color: theme.colors.textSecondary },
-    calcBtn: { marginTop: 12, backgroundColor: '#db2777' }, // Custom color for foundation
+    calcBtn: { marginTop: 12 },
     resultCard: {
         marginTop: 24,
-        backgroundColor: '#db2777',
+        backgroundColor: theme.colors.primary,
         padding: 24,
         borderRadius: 24,
     },
@@ -133,3 +137,4 @@ const styles = StyleSheet.create({
     breakdownLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
     breakdownValue: { color: 'white', fontWeight: '600', fontSize: 14 },
 });
+

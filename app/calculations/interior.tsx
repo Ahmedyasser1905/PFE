@@ -1,31 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, PaintBucket, Grid3X3, Layers, Calculator as CalcIcon } from 'lucide-react-native';
+import { ArrowLeft, Layout, Smartphone, Calculator as CalcIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { BaseInput } from '../../../components/BaseInput';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseInput } from '../../components/BaseInput';
+import { BaseButton } from '../../components/BaseButton';
 
-type FinishType = 'paint' | 'tiles' | 'plaster';
-
-export default function FinishesCalculator() {
+export default function InteriorCalculator() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<FinishType>('paint');
+    const [activeTab, setActiveTab] = useState<'flooring' | 'ceiling'>('flooring');
     const [area, setArea] = useState('');
     const [result, setResult] = useState<any>(null);
 
     const calculate = () => {
         const a = parseFloat(area);
         if (!a) return;
-
-        if (activeTab === 'paint') {
-            setResult({ quantity: a / 10, unit: 'Liters', sub: '2 Coats' });
-        } else if (activeTab === 'tiles') {
-            setResult({ quantity: Math.ceil(a * 1.1), unit: 'm²', sub: 'incl. 10% waste' });
-        } else {
-            setResult({ quantity: a * 20, unit: 'kg', sub: '12mm depth' });
-        }
+        setResult({
+            quantity: Math.ceil(a * 1.05),
+            materials: activeTab === 'flooring' ? 'Vinyl/Parquet Planks' : 'Gypsum Boards'
+        });
     };
 
     return (
@@ -34,40 +28,37 @@ export default function FinishesCalculator() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <ArrowLeft size={24} color={theme.colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Finishing Calc</Text>
+                <Text style={styles.title}>Interior Calc</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <View style={styles.tabs}>
-                {[
-                    { id: 'paint', label: 'Paint', icon: PaintBucket },
-                    { id: 'tiles', label: 'Tiles', icon: Grid3X3 },
-                    { id: 'plaster', label: 'Plaster', icon: Layers },
-                ].map((tab) => (
-                    <TouchableOpacity
-                        key={tab.id}
-                        style={[styles.tab, activeTab === tab.id && styles.activeTab]}
-                        onPress={() => { setActiveTab(tab.id as any); setResult(null); }}
-                    >
-                        <tab.icon size={18} color={activeTab === tab.id ? 'white' : theme.colors.textSecondary} />
-                        <Text style={[styles.tabLabel, activeTab === tab.id && styles.activeTabLabel]}>{tab.label}</Text>
-                    </TouchableOpacity>
-                ))}
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'flooring' && styles.activeTab]}
+                    onPress={() => setActiveTab('flooring')}
+                >
+                    <Text style={[styles.tabLabel, activeTab === 'flooring' && styles.activeTabLabel]}>Flooring</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'ceiling' && styles.activeTab]}
+                    onPress={() => setActiveTab('ceiling')}
+                >
+                    <Text style={[styles.tabLabel, activeTab === 'ceiling' && styles.activeTabLabel]}>Ceiling</Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.card}>
-                    <Text style={styles.label}>Surface Area</Text>
                     <BaseInput
-                        label="Total Area (m²)"
+                        label="Room Surface Area (m²)"
                         placeholder="0.00"
                         value={area}
                         onChangeText={setArea}
-                        icon={CalcIcon}
+                        icon={Layout}
                         keyboardType="numeric"
                     />
                     <BaseButton
-                        title={`Calculate ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
+                        title={`Calculate ${activeTab}`}
                         onPress={calculate}
                         style={styles.calcBtn}
                     />
@@ -75,9 +66,9 @@ export default function FinishesCalculator() {
 
                 {result && (
                     <View style={styles.resultCard}>
-                        <Text style={styles.resultLabel}>Required Material</Text>
-                        <Text style={styles.resultValue}>{result.quantity.toFixed(1)} {result.unit}</Text>
-                        <Text style={styles.resultSub}>{result.sub}</Text>
+                        <Text style={styles.resultLabel}>Required Inventory</Text>
+                        <Text style={styles.resultValue}>{result.quantity} m²</Text>
+                        <Text style={styles.resultSub}>{result.materials}</Text>
                     </View>
                 )}
             </ScrollView>
@@ -86,7 +77,7 @@ export default function FinishesCalculator() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
+    container: { flex: 1, backgroundColor: '#f5f3ff' },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -106,15 +97,12 @@ const styles = StyleSheet.create({
     },
     tab: {
         flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
         paddingVertical: 10,
         borderRadius: 12,
         backgroundColor: '#f1f5f9',
+        alignItems: 'center',
     },
-    activeTab: { backgroundColor: '#b91c1c' },
+    activeTab: { backgroundColor: '#7c3aed' },
     tabLabel: { fontSize: 13, fontWeight: '700', color: theme.colors.textSecondary },
     activeTabLabel: { color: 'white' },
     content: { padding: theme.spacing.xl },
@@ -125,8 +113,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.colors.border,
     },
-    label: { fontSize: 16, fontWeight: '700', marginBottom: 20 },
-    calcBtn: { marginTop: 12, backgroundColor: '#b91c1c' },
+    calcBtn: { marginTop: 12, backgroundColor: '#7c3aed' },
     resultCard: {
         marginTop: 24,
         backgroundColor: 'white',
@@ -134,9 +121,10 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#b91c1c',
+        borderColor: '#7c3aed',
     },
     resultLabel: { color: theme.colors.textSecondary, fontWeight: '600', marginBottom: 8 },
-    resultValue: { color: '#b91c1c', fontSize: 32, fontWeight: '800' },
+    resultValue: { color: '#7c3aed', fontSize: 32, fontWeight: '800' },
     resultSub: { color: theme.colors.placeholder, marginTop: 4, fontWeight: '600' },
 });
+

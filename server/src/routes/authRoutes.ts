@@ -197,6 +197,13 @@ router.post('/reset-password-otp', async (req, res) => {
             $unset: { resetOTP: 1, resetOTPExpires: 1 }
         });
 
+        // Send confirmation email
+        await sendEmail({
+            email: user.email,
+            subject: 'Password Changed Successfully',
+            message: `Hi ${user.fullName},\n\nThis is a confirmation that the password for your BuildEst account has been successfully changed.\n\nIf you did not perform this action, please contact support immediately.`,
+        });
+
         res.status(200).json({ message: 'Password reset successful' });
     } catch (error: any) {
         res.status(500).json({ message: error.message });

@@ -13,8 +13,8 @@ import {
     FileText,
     Calculator
 } from 'lucide-react-native';
-import { theme } from '../../../constants/theme';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseButton } from '../../components/BaseButton';
 
 export default function ProjectDetails() {
     const { id } = useLocalSearchParams();
@@ -42,7 +42,7 @@ export default function ProjectDetails() {
                     <ArrowLeft size={24} color={theme.colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Project Details</Text>
-                <TouchableOpacity onPress={() => router.push(`/(dashboard)/projects/edit/${id}`)}>
+                <TouchableOpacity onPress={() => router.push(`/projects/edit/${id}`)}>
                     <Edit3 size={24} color={theme.colors.primary} />
                 </TouchableOpacity>
             </View>
@@ -105,7 +105,7 @@ export default function ProjectDetails() {
                 <View style={styles.actionsContainer}>
                     <BaseButton
                         title="Perform Calculation"
-                        onPress={() => router.push('/(dashboard)/calculations')}
+                        onPress={() => router.push('/calculations')}
                         icon={Calculator}
                         style={styles.actionBtn}
                     />

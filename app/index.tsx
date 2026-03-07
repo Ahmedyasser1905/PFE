@@ -1,136 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, ArrowRight } from 'lucide-react-native';
-import { Link, useRouter } from 'expo-router';
+import {
+    Plus,
+    CheckCircle2,
+    ChevronRight,
+    HardHat,
+    Calculator,
+    Settings
+} from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { theme } from '../constants/theme';
-import { Logo } from '../components/Logo';
-import { BaseInput } from '../components/BaseInput';
-import { BaseButton } from '../components/BaseButton';
-
-import { authApi } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 
-export default function LoginScreen() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const { login, user, loading: authLoading, getInitialRoute } = useAuth();
+export default function HomeScreen() {
     const router = useRouter();
+    const { user, logout } = useAuth();
 
+    const stats = [
+        { label: 'My Projects', value: '--', icon: HardHat, color: theme.colors.primary },
+        { label: 'Calculations', value: '--', icon: Calculator, color: '#10b981' },
+        { label: 'Tasks Done', value: '--', icon: CheckCircle2, color: '#6366f1' },
+    ];
 
-    const handleLogin = async () => {
-        console.log('[Login] handleLogin started', { email });
-        if (!email || !password) {
-            console.warn('[Login] Missing email or password');
-            return;
-        }
-
-        try {
-            setLoading(true);
-            console.log('[Login] Calling authApi.login...');
-            const response = await authApi.login({ email, password });
-            console.log('[Login] Login success:', response.data);
-            const { user, token } = response.data;
-            await login(user, token);
-            const initialRoute = getInitialRoute();
-            console.log('[Login] Navigating to:', initialRoute);
-            router.replace(initialRoute);
-        } catch (error: any) {
-            console.error('[Login] Login failed:', error.response?.data?.message || error.message);
-            alert('Login failed: ' + (error.response?.data?.message || 'Server error'));
-        } finally {
-            setLoading(false);
-            console.log('[Login] handleLogin finished');
-        }
-    };
+    const recentActivities: any[] = [];
 
     return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
-            >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    <View style={styles.header}>
-                        <Logo size="md" />
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+            <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                    <View style={styles.roleBadge}>
+                        <Text style={styles.roleBadgeText}>{user?.role?.toUpperCase() || 'MEMBER'}</Text>
                     </View>
+                    <Text style={styles.greeting}>Hello, {user?.fullName?.split(' ')[0] || 'Member'}</Text>
+                    <Text style={styles.subGreeting}>Welcome back to your workspace.</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.profileBadge}
+                    onPress={() => router.push('/settings')}
+                >
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'M'}</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
 
-                    <View style={styles.content}>
-                        <Text style={styles.title}>Welcome back</Text>
-                        <Text style={styles.subtitle}>
-                            Log in to manage your construction estimates and projects efficiently.
-                        </Text>
-
-                        <BaseInput
-                            label="Email Address"
-                            placeholder="engineer@example.com"
-                            icon={Mail}
-                            value={email}
-                            onChangeText={setEmail}
-                        />
-
-                        <View style={styles.passwordContainer}>
-                            <View style={styles.passwordHeader}>
-                                <Text style={styles.label}>Password</Text>
-                                <Link href="/forgot-password" asChild>
-                                    <Pressable>
-                                        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-                                    </Pressable>
-                                </Link>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                <View style={styles.statsGrid}>
+                    {stats.map((stat, index) => (
+                        <View key={index} style={styles.statCard}>
+                            <View style={[styles.iconBox, { backgroundColor: stat.color + '15' }]}>
+                                <stat.icon size={20} color={stat.color} />
                             </View>
-                            <BaseInput
-                                label="Password"
-                                placeholder="••••••••"
-                                icon={Lock}
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
+                            <Text style={styles.statValue}>{stat.value}</Text>
+                            <Text style={styles.statLabel}>{stat.label}</Text>
                         </View>
+                    ))}
+                </View>
 
-                        <Pressable
-                            style={styles.rememberContainer}
-                            onPress={() => setRememberMe(!rememberMe)}
-                        >
-                            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                                {rememberMe && <View style={styles.checkboxInner} />}
-                            </View>
-                            <Text style={styles.rememberText}>Remember for 30 days</Text>
-                        </Pressable>
+                {/* New Project FAB or call to action could go here if needed, but for now we follow user request to keep bottom clean */}
 
-                        <BaseButton
-                            title="Log In"
-                            onPress={handleLogin}
-                            loading={loading}
-                            icon={ArrowRight}
-                            style={styles.loginButton}
-                        />
-
-                        <View style={styles.dividerContainer}>
-                            <View style={styles.divider} />
-                            <Text style={styles.dividerText}>or</Text>
-                            <View style={styles.divider} />
-                        </View>
-
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>Don't have an account? </Text>
-                            <Link href="/register" asChild>
-                                <Pressable>
-                                    <Text style={styles.linkText}>Create an account</Text>
-                                </Pressable>
-                            </Link>
-                        </View>
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Recent Activity</Text>
+                        <TouchableOpacity>
+                            <Text style={styles.viewAll}>View All</Text>
+                        </TouchableOpacity>
                     </View>
 
-                    <View style={styles.bottomLinks}>
-                        <Text style={styles.bottomLinkText}>Privacy Policy</Text>
-                        <View style={styles.dot} />
-                        <Text style={styles.bottomLinkText}>Terms of Service</Text>
+                    <View style={styles.activityList}>
+                        {recentActivities.map((activity) => (
+                            <TouchableOpacity key={activity.id} style={styles.activityItem}>
+                                <View style={styles.activityInfo}>
+                                    <Text style={styles.activityTitle}>{activity.title}</Text>
+                                    <Text style={styles.activityProject}>{activity.project} • {activity.time}</Text>
+                                </View>
+                                <ChevronRight size={18} color={theme.colors.border} />
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                </View>
+            </ScrollView>
+
+            <View style={styles.bottomNav}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push('/')}>
+                    <HardHat size={24} color={theme.colors.primary} />
+                    <Text style={[styles.navLabel, { color: theme.colors.primary }]}>Home</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push('/projects')}>
+                    <CheckCircle2 size={24} color={theme.colors.textSecondary} />
+                    <Text style={styles.navLabel}>Projects</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.navItem, styles.navItemMain]} onPress={() => router.push('/projects/create')}>
+                    <View style={styles.plusIconBox}>
+                        <Plus size={28} color="white" />
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push('/calculations')}>
+                    <Calculator size={24} color={theme.colors.textSecondary} />
+                    <Text style={styles.navLabel}>Tools</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push('/settings')}>
+                    <Settings size={24} color={theme.colors.textSecondary} />
+                    <Text style={styles.navLabel}>Settings</Text>
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
     );
 }
@@ -138,136 +116,196 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    keyboardView: {
-        flex: 1,
+        backgroundColor: '#f8fafc',
     },
     scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: theme.spacing.xl,
-        paddingTop: theme.spacing.xxl,
-        paddingBottom: theme.spacing.xl,
+        paddingBottom: 100, // Account for bottom nav
     },
     header: {
-        marginBottom: theme.spacing.xxl,
-    },
-    content: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: theme.colors.text,
-        marginBottom: theme.spacing.sm,
-        letterSpacing: -1,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        lineHeight: 24,
-        marginBottom: theme.spacing.xl,
-    },
-    passwordContainer: {
-        width: '100%',
-    },
-    passwordHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.xl,
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
     },
-    label: {
+    headerLeft: {
+        flex: 1,
+    },
+    bottomNav: {
+        position: 'absolute',
+        bottom: 25,
+        left: 20,
+        right: 20,
+        height: 70,
+        backgroundColor: 'white',
+        borderRadius: 35,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingHorizontal: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+    },
+    navItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+    },
+    navItemMain: {
+        marginTop: -30,
+    },
+    plusIconBox: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: theme.colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 8,
+    },
+    navLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: theme.colors.textSecondary,
+        marginTop: 4,
+    },
+    greeting: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: theme.colors.text,
+    },
+    subGreeting: {
         fontSize: 14,
+        color: theme.colors.textSecondary,
+        marginTop: 2,
+    },
+    roleBadge: {
+        backgroundColor: theme.colors.primary + '15',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginBottom: 8,
+        alignSelf: 'flex-start',
+    },
+    roleBadgeText: {
+        color: theme.colors.primary,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    profileBadge: {
+        padding: 2,
+        borderRadius: 20,
+        backgroundColor: theme.colors.border,
+    },
+    avatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        padding: theme.spacing.xl,
+        gap: 12,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: 'white',
+        padding: theme.spacing.lg,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    iconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: theme.colors.text,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    section: {
+        paddingHorizontal: theme.spacing.xl,
+        marginTop: theme.spacing.lg,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.md,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: theme.colors.text,
+    },
+    viewAll: {
+        fontSize: 14,
+        color: theme.colors.primary,
+        fontWeight: '600',
+    },
+    activityList: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        overflow: 'hidden',
+    },
+    activityItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: theme.spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+    },
+    activityInfo: {
+        flex: 1,
+    },
+    activityTitle: {
+        fontSize: 15,
         fontWeight: '600',
         color: theme.colors.text,
     },
-    forgotPasswordText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: theme.colors.primary,
-    },
-    rememberContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing.xl,
-        gap: 10,
-    },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        borderWidth: 2,
-        borderColor: theme.colors.border,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    checkboxChecked: {
-        borderColor: theme.colors.primary,
-        backgroundColor: theme.colors.primary,
-    },
-    checkboxInner: {
-        width: 10,
-        height: 10,
-        backgroundColor: 'white',
-        borderRadius: 2,
-    },
-    rememberText: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-    },
-    loginButton: {
-        marginBottom: theme.spacing.xl,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 6,
-    },
-    dividerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing.xl,
-        gap: 12,
-    },
-    divider: {
-        flex: 1,
-        height: 1,
-        backgroundColor: theme.colors.border,
-    },
-    dividerText: {
-        color: theme.colors.textSecondary,
-        fontSize: 14,
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: theme.spacing.xl,
-    },
-    footerText: {
-        fontSize: 15,
-        color: theme.colors.textSecondary,
-    },
-    linkText: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: theme.colors.primary,
-    },
-    bottomLinks: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 12,
-    },
-    bottomLinkText: {
+    activityProject: {
         fontSize: 13,
         color: theme.colors.textSecondary,
-    },
-    dot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: theme.colors.placeholder,
+        marginTop: 2,
     },
 });
+

@@ -1,53 +1,74 @@
 import 'react-native-gesture-handler';
-import { View, ActivityIndicator } from 'react-native';
-import { useRouter, useSegments, Stack } from 'expo-router';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useRouter, useSegments, Stack, useRootNavigationState } from 'expo-router';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
 import { theme } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { LoadingScreen } from '../components/LoadingScreen';
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
     const { user, loading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const navigationState = useRootNavigationState();
 
     useEffect(() => {
-        if (loading) return;
+        if (loading || !navigationState?.key) return;
 
-        const inAuthGroup = segments[0] === '(dashboard)';
+        const segment = segments[0];
+        const isLoginPage = segment === 'login';
+        const isRegisterPage = segment === 'register';
+        const isForgotPassword = segment === 'forgot-password';
+        const isVerifyOtp = segment === 'verify-otp';
+        const isResetPassword = segment === 'reset-password';
+        const isTerms = segment === 'terms';
+        const isPrivacy = segment === 'privacy';
 
-        console.log('[RootLayout] Auth Check:', {
-            authenticated: !!user,
-            segment: segments[0] || '/',
-            inAuthGroup
-        });
+        const isAuthPage = isLoginPage || isRegisterPage || isForgotPassword || isVerifyOtp || isResetPassword || isTerms || isPrivacy;
 
-        if (!user && inAuthGroup) {
-            // Force redirect to login if user is null and in protected area
-            console.log('[RootLayout] Access denied, replacing with login');
+        if (!user && !isAuthPage) {
+            router.replace('/login');
+        } else if (user && isAuthPage && !isTerms && !isPrivacy) {
             router.replace('/');
-        } else if (user && !inAuthGroup && (segments[0] === undefined || segments[0] === '')) {
-            // Redirect to dashboard if logged in and on the login page
-            console.log('[RootLayout] Authenticated, replacing with dashboard');
-            router.replace('/(dashboard)');
+        } else {
+            // Instant hide once we are where we need to be
+            SplashScreen.hideAsync();
         }
-    }, [user, loading, segments, router]);
+    }, [user, loading, segments, router, navigationState?.key]);
 
-    if (loading) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-        );
-    }
+    // Anti-flicker logic: show LoadingScreen overlay until the route matches the auth state
+    const segment = segments[0];
+    const isAuthPage = ['login', 'register', 'forgot-password', 'verify-otp', 'reset-password', 'terms', 'privacy'].includes(segment);
+    const shouldRedirect = (!user && !isAuthPage) || (user && isAuthPage && !['terms', 'privacy'].includes(segment));
+
+    const showOverlay = loading || !navigationState?.key || shouldRedirect;
 
     return (
-        <Stack
-            screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: theme.colors.background },
-            }}
-        />
+        <View style={{ flex: 1 }}>
+            <Stack
+                screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: theme.colors.background },
+                }}
+            />
+            {showOverlay && (
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 999
+                }}>
+                    <LoadingScreen />
+                </View>
+            )}
+        </View>
     );
 }
 
@@ -60,3 +81,4 @@ export default function Layout() {
         </GestureHandlerRootView>
     );
 }
+

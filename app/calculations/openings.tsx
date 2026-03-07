@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, DoorOpen, LayoutPanelTop, Calculator as CalcIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { BaseInput } from '../../../components/BaseInput';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseInput } from '../../components/BaseInput';
+import { BaseButton } from '../../components/BaseButton';
 
 export default function OpeningsCalculator() {
     const router = useRouter();
@@ -127,3 +127,4 @@ const styles = StyleSheet.create({
     resultValue: { color: 'white', fontSize: 32, fontWeight: '800' },
     resultSub: { color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: '600' },
 });
+

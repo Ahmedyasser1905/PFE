@@ -24,6 +24,7 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
     iconPosition = 'right',
     style,
 }) => {
+    
     const getButtonStyle = () => {
         switch (variant) {
             case 'outline':

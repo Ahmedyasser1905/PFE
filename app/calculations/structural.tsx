@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Hammer, Calculator as CalcIcon, RefreshCcw, Weight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { BaseInput } from '../../../components/BaseInput';
-import { BaseButton } from '../../../components/BaseButton';
+import { theme } from '../../constants/theme';
+import { BaseInput } from '../../components/BaseInput';
+import { BaseButton } from '../../components/BaseButton';
 
 export default function StructuralCalculator() {
     const router = useRouter();
@@ -117,3 +117,4 @@ const styles = StyleSheet.create({
     breakdownLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
     breakdownValue: { color: 'white', fontWeight: '600', fontSize: 14 },
 });
+

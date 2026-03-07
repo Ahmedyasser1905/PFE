@@ -1,20 +1,35 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { storage } from '../utils/storage';
 
-// In development, the local IP is crucial for physical devices
-// 192.168.1.9 is your computer's IP on the Wi-Fi.
-// 10.0.2.2 is ONLY for the Android Emulator.
-const getBaseUrl = () => {
+// REPLACE THIS with your final Render.com URL (e.g., https://buildest-app.onrender.com/api)
+const PRODUCTION_URL = 'https://buildest-server.onrender.com/api';
+
+const getBaseUrl = async () => {
+    // 1. Check for custom server URL (from the Globe icon modal)
+    const customUrl = await storage.getItem('customServerUrl');
+    if (customUrl) return customUrl;
+
+    // 2. Use Production URL if set (not "YOUR_RENDER_URL")
+    if (PRODUCTION_URL && !PRODUCTION_URL.includes('YOUR_RENDER_URL')) {
+        return PRODUCTION_URL;
+    }
+
+    // 3. Fallback to Local/Dev
     if (Platform.OS === 'web') return 'http://localhost:5000/api';
 
-    // For physical devices (Android or iOS) on the same Wi-Fi
-    // We'll use 192.168.1.9 which you confirmed is your IP.
+    const debuggerHost = Constants.expoConfig?.hostUri;
+    const localhost = debuggerHost?.split(':')[0];
+
+    if (localhost) {
+        return `http://${localhost}:5000/api`;
+    }
+
     return 'http://192.168.1.9:5000/api';
 };
 
-const BASE_URL = getBaseUrl();
-console.log(`[API] Configuration: ${BASE_URL} (Platform: ${Platform.OS})`);
+let BASE_URL = 'http://192.168.1.9:5000/api';
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -22,6 +37,18 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+});
+
+// Function to update base URL at runtime
+export const updateApiBaseUrl = (newUrl: string) => {
+    api.defaults.baseURL = newUrl;
+    BASE_URL = newUrl;
+    console.log(`[API] BaseURL updated to: ${newUrl}`);
+};
+
+// Initialize base URL
+getBaseUrl().then(url => {
+    updateApiBaseUrl(url);
 });
 
 // Request interceptor to add JWT token

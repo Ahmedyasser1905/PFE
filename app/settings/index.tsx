@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     User,
@@ -11,22 +11,22 @@ import {
     Globe,
     CircleHelp,
     FileText,
-    Crown
+    Crown,
+    ArrowLeft,
+    Shield,
+    Gavel
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import { useAuth } from '../../../context/AuthContext';
+import { theme } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileSettings() {
     const router = useRouter();
     const { user, logout } = useAuth();
 
     const handleLogout = async () => {
-        console.log('[Settings] handleLogout triggered');
         try {
             await logout();
-            console.log('[Settings] logout() successful');
-            // Redirection is now handled by the centralized AuthGuard in AuthContext
         } catch (error) {
             console.error('[Settings] Logout error:', error);
         }
@@ -36,16 +36,26 @@ export default function ProfileSettings() {
         { title: 'Personal Information', icon: User, route: null },
         { title: 'Notification Settings', icon: Bell, route: null },
         { title: 'App Language', icon: Globe, value: 'English', route: null },
-        { title: 'Security & Password', icon: Lock, route: '/(dashboard)/settings/password' },
+        { title: 'Security & Password', icon: Lock, route: '/settings/password' },
+        { title: 'Subscription Plan', icon: FileText, route: '/settings/plans' },
+        { title: 'Terms & Conditions', icon: Gavel, route: '/terms' },
+        { title: 'Privacy Policy', icon: Shield, route: '/privacy' },
         { title: 'Help & Support', icon: CircleHelp, route: null },
     ];
-
-    const filteredMenuItems = menuItems;
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <Text style={styles.title}>Settings</Text>
+                <TouchableOpacity
+                    onPress={() => router.push('/')}
+                    style={styles.backBtnVisible}
+                    activeOpacity={0.8}
+                >
+                    <ArrowLeft size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.titleText}>Settings</Text>
+                {/* Invisible spacer so title is centered exactly */}
+                <View style={{ width: 80 }} />
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -63,7 +73,7 @@ export default function ProfileSettings() {
                 </View>
 
                 <View style={styles.menuContainer}>
-                    {filteredMenuItems.map((item, index) => (
+                    {menuItems.map((item, index) => (
                         <TouchableOpacity
                             key={index}
                             style={styles.menuItem}
@@ -102,14 +112,33 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     header: {
-        padding: theme.spacing.xl,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 10 : 10,
+        paddingBottom: 15,
+        backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
+        zIndex: 100,
     },
-    title: {
-        fontSize: 24,
+    backBtnVisible: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.colors.border + '50', // very subtle background
+    },
+    titleText: {
+        fontSize: 20,
         fontWeight: '800',
         color: theme.colors.text,
+        textAlign: 'center',
+        flex: 1,
+        marginLeft: -20, // offset slightly to balance the large back button perfectly
     },
     profileSection: {
         alignItems: 'center',

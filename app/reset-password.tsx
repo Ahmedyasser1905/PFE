@@ -10,7 +10,7 @@ import { BaseButton } from '../components/BaseButton';
 import { authApi } from '../api/api';
 
 export default function ResetPasswordScreen() {
-    const { email, otp } = useLocalSearchParams();
+    const { email, otp } = useLocalSearchParams<{ email: string; otp: string }>();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -34,7 +34,11 @@ export default function ResetPasswordScreen() {
 
         try {
             setLoading(true);
-            await authApi.resetPasswordOtp({ email, otp, password });
+            await authApi.resetPasswordOtp({
+                email: email as string,
+                otp: otp as string,
+                password
+            });
             setSuccess(true);
         } catch (error: any) {
             console.error('Reset password failed:', error.response?.data?.message || error.message);
@@ -70,6 +74,15 @@ export default function ResetPasswordScreen() {
                 style={styles.keyboardView}
             >
                 <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <BaseButton
+                        title="Back"
+                        onPress={() => router.back()}
+                        variant="ghost"
+                        icon={ArrowLeft}
+                        iconPosition="left"
+                        style={styles.backButton}
+                    />
+
                     <View style={styles.header}>
                         <Logo size="md" />
                     </View>
@@ -122,8 +135,13 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: theme.spacing.xl,
-        paddingTop: theme.spacing.xxxl,
+        paddingTop: theme.spacing.xl,
         paddingBottom: theme.spacing.xl,
+    },
+    backButton: {
+        alignSelf: 'flex-start',
+        marginBottom: theme.spacing.xl,
+        paddingHorizontal: 0,
     },
     header: {
         marginBottom: theme.spacing.xxl,
@@ -159,3 +177,4 @@ const styles = StyleSheet.create({
         width: '100%',
     },
 });
+

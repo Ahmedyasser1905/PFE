@@ -13,7 +13,8 @@ const sendEmail = async (options: EmailOptions) => {
 
     if (isDev && !hasCredentials) {
         console.log('--------------------------------------------------');
-        console.log('📧 DEVELOPMENT EMAIL LOG:');
+        console.log('📧 DEVELOPMENT EMAIL LOG (Missing SMTP Credentials):');
+        console.log('To send real emails, please set EMAIL_USER and EMAIL_PASS in your .env file.');
         console.log(`To: ${options.email}`);
         console.log(`Subject: ${options.subject}`);
         console.log(`Message: ${options.message}`);
@@ -24,10 +25,15 @@ const sendEmail = async (options: EmailOptions) => {
     const transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
         port: Number(process.env.EMAIL_PORT) || 587,
+        secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
+        tls: {
+            // Do not fail on invalid certs (common for development or private servers)
+            rejectUnauthorized: process.env.EMAIL_REJECT_UNAUTHORIZED !== 'false'
+        }
     });
 
     try {
