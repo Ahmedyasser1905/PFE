@@ -5,7 +5,7 @@ Write-Host "Checking for changes..." -ForegroundColor Cyan
 
 # Check if there are any changes
 $changes = git status --porcelain
-if ($null -eq $changes) {
+if ([string]::IsNullOrWhiteSpace($changes)) {
     Write-Host "No changes to sync." -ForegroundColor Yellow
     exit
 }
