@@ -1,12 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
 import { validateBody } from '../middleware/validate';
 import { optionalAuth } from '../middleware/auth';
-import Project from '../models/Project';
-import Estimation, { ILeafCalculation } from '../models/Estimation';
-import Category from '../models/Category';
-import Material from '../models/Material';
+import { supabase } from '../config/supabase';
 
 const router = Router();
 
@@ -28,26 +24,54 @@ const DeleteLeafSchema = z.object({
     leaf_id: z.string().min(1)
 });
 
-// Mock engine computing function
-async function computeLeaf(category_id: string, formula_id: string, field_values: Record<string, any>): Promise<Partial<ILeafCalculation>> {
-    const category = await Category.findOne({ _id: category_id, type: 'LEAF' });
-    if (!category) throw new Error('Leaf category not found');
+const mapToMongo = (row: any) => {
+    if (!row) return null;
+    const mapped = { ...row };
+    if (mapped.id) {
+        mapped._id = mapped.id;
+        delete mapped.id;
+    }
+    if (mapped.created_at) mapped.createdAt = mapped.created_at;
+    if (mapped.updated_at) mapped.updatedAt = mapped.updated_at;
+    return mapped;
+};
 
-    const formula = category.formulas.find(f => f.formula_id === formula_id);
+const mapLeaf = (leaf: any) => {
+    const m = mapToMongo(leaf);
+    if (m) m.leaf_id = m._id;
+    return m;
+};
+
+// Supabase-driven calculation
+async function computeLeaf(category_id: string, formula_id: string, field_values: Record<string, any>) {
+    const { data: category, error: catError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('id', category_id)
+        .eq('type', 'LEAF')
+        .single();
+        
+    if (catError || !category) throw new Error('Leaf category not found');
+
+    const formulas = category.formulas || [];
+    const formula = formulas.find((f: any) => f.formula_id === formula_id);
     if (!formula) throw new Error('Formula not found on category');
 
-    // Default mock calculation logic: multiply all numeric fields
     let total_quantity = 1;
     for (const val of Object.values(field_values)) {
         if (typeof val === 'number') total_quantity *= val;
     }
 
-    // Mock retrieving some materials related to the leaf
-    const materials = await Material.find({ category_id }).limit(3);
-    const material_lines = materials.map(mat => {
+    const { data: materials, error: matError } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('category_id', category_id)
+        .limit(3);
+
+    const material_lines = (materials || []).map(mat => {
         const qty = total_quantity * (1 + (mat.waste_factor_default / 100));
         return {
-            material_id: mat._id as string,
+            material_id: mat.id,
             quantity: qty,
             unit_price: mat.unit_price,
             total_cost: qty * mat.unit_price,
@@ -61,10 +85,7 @@ async function computeLeaf(category_id: string, formula_id: string, field_values
         category_id,
         formula_id,
         inputs: field_values,
-        outputs: {
-            total_quantity,
-            units: 'calculated_unit'
-        },
+        outputs: { total_quantity, units: 'calculated_unit' },
         material_lines,
         total_cost
     };
@@ -72,101 +93,91 @@ async function computeLeaf(category_id: string, formula_id: string, field_values
 
 /**
  * POST /calculate
- * Stateless preview
  */
 router.post('/calculate', optionalAuth, validateBody(CalculateSchema), async (req: Request, res: Response) => {
     try {
         const { category_id, selected_formula_id, field_values } = req.body;
         const result = await computeLeaf(category_id, selected_formula_id, field_values);
 
-        res.json({
-            status: 'ok',
-            data: result
-        });
+        res.json({ status: 'ok', data: result });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
 /**
- * POST /estimation/save-leaf
+ * POST /save-leaf
  */
 router.post('/save-leaf', optionalAuth, validateBody(SaveLeafSchema), async (req: Request, res: Response) => {
     try {
         const { project_id, category_id, selected_formula_id, field_values } = req.body;
         const user = (req as any).user;
-        const user_id = user ? user._id.toString() : null;
+        const user_id = user ? (user._id || user.id).toString() : null;
 
-        const project = await Project.findOne({ _id: project_id, user_id });
-        if (!project || !project.estimation_id) {
-            return res.status(404).json({ status: 'error', message: 'Project or Estimation not found' });
-        }
-
-        const estimation = await Estimation.findById(project.estimation_id);
-        if (!estimation) {
-            return res.status(404).json({ status: 'error', message: 'Estimation record missing' });
-        }
+        const { data: project } = await supabase.from('projects').select('estimation_id').eq('id', project_id).eq('user_id', user_id).single();
+        if (!project) return res.status(404).json({ status: 'error', message: 'Project not found' });
 
         const calculated = await computeLeaf(category_id, selected_formula_id, field_values);
 
-        const newLeaf = {
-            leaf_id: uuidv4(),
-            ...calculated,
-            created_at: new Date(),
-            updated_at: new Date()
-        } as ILeafCalculation;
+        // Insert new leaf calculation relationally
+        const { data: newLeaf, error: leafError } = await supabase.from('leaf_calculations').insert({
+            estimation_id: project.estimation_id,
+            ...calculated
+        }).select().single();
 
-        estimation.leaf_calculations.push(newLeaf);
+        if (leafError) throw leafError;
+
+        // Recalculate totals via aggregating the DB
+        const { data: leaves } = await supabase.from('leaf_calculations').select('total_cost').eq('estimation_id', project.estimation_id);
+        const newTotal = (leaves || []).reduce((sum, l) => sum + Number(l.total_cost), 0);
+        const newCount = leaves ? leaves.length : 0;
+
+        await supabase.from('estimations').update({ total_budget: newTotal }).eq('id', project.estimation_id);
+        await supabase.from('projects').update({ total_cost: newTotal, leaf_count: newCount }).eq('id', project_id);
+
+        // Fetch fully hydrated estimation to return to frontend
+        const { data: estimation } = await supabase.from('estimations').select('*, leaf_calculations(*)').eq('id', project.estimation_id).single();
         
-        // Recalculate totals
-        estimation.total_budget = estimation.leaf_calculations.reduce((sum, leaf) => sum + leaf.total_cost, 0);
-        await estimation.save();
+        const responseData = estimation ? {
+            ...mapToMongo(estimation),
+            leaf_calculations: (estimation.leaf_calculations || []).map(mapLeaf)
+        } : null;
 
-        project.total_cost = estimation.total_budget;
-        project.leaf_count = estimation.leaf_calculations.length;
-        await project.save();
-
-        res.json({
-            status: 'ok',
-            data: estimation
-        });
+        res.json({ status: 'ok', data: responseData });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
 /**
- * DELETE /estimation/leaf
+ * DELETE /leaf
  */
 router.delete('/leaf', optionalAuth, validateBody(DeleteLeafSchema), async (req: Request, res: Response) => {
     try {
         const { project_id, leaf_id } = req.body;
         const user = (req as any).user;
-        const user_id = user ? user._id.toString() : null;
+        const user_id = user ? (user._id || user.id).toString() : null;
 
-        const project = await Project.findOne({ _id: project_id, user_id });
-        if (!project || !project.estimation_id) {
-            return res.status(404).json({ status: 'error', message: 'Project not found' });
-        }
+        const { data: project } = await supabase.from('projects').select('estimation_id').eq('id', project_id).eq('user_id', user_id).single();
+        if (!project) return res.status(404).json({ status: 'error', message: 'Project not found' });
 
-        const estimation = await Estimation.findById(project.estimation_id);
-        if (!estimation) {
-            return res.status(404).json({ status: 'error', message: 'Estimation not found' });
-        }
+        await supabase.from('leaf_calculations').delete().eq('id', leaf_id).eq('estimation_id', project.estimation_id);
 
-        estimation.leaf_calculations = estimation.leaf_calculations.filter(leaf => leaf.leaf_id !== leaf_id);
+        const { data: leaves } = await supabase.from('leaf_calculations').select('total_cost').eq('estimation_id', project.estimation_id);
+        const newTotal = (leaves || []).reduce((sum, l) => sum + Number(l.total_cost), 0);
+        const newCount = leaves ? leaves.length : 0;
+
+        await supabase.from('estimations').update({ total_budget: newTotal }).eq('id', project.estimation_id);
+        await supabase.from('projects').update({ total_cost: newTotal, leaf_count: newCount }).eq('id', project_id);
+
+        const { data: estimation } = await supabase.from('estimations').select('*, leaf_calculations(*)').eq('id', project.estimation_id).single();
         
-        estimation.total_budget = estimation.leaf_calculations.reduce((sum, leaf) => sum + leaf.total_cost, 0);
-        await estimation.save();
+        const responseData = estimation ? {
+            ...mapToMongo(estimation),
+            leaf_calculations: (estimation.leaf_calculations || []).map(mapLeaf)
+        } : null;
 
-        project.total_cost = estimation.total_budget;
-        project.leaf_count = estimation.leaf_calculations.length;
-        await project.save();
-
-        res.json({
-            status: 'ok',
-            data: estimation
-        });
+        res.json({ status: 'ok', data: responseData });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
     }
