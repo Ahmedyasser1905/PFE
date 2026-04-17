@@ -6,6 +6,8 @@
 -- 1. PROFILES (Extends Auth Users)
 CREATE TABLE public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  full_name TEXT,
+  avatar TEXT,
   role TEXT DEFAULT 'USER',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -68,6 +70,16 @@ CREATE TABLE public.leaf_calculations (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 7. CHAT_MESSAGES
+CREATE TABLE public.chat_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  session_id TEXT NOT NULL,
+  role TEXT NOT NULL, -- 'user' or 'assistant'
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- Security so users only see their own data
@@ -103,6 +115,11 @@ CREATE POLICY "Users can delete leaf calcs from their estimation" ON public.leaf
     SELECT 1 FROM public.estimations WHERE estimations.id = leaf_calculations.estimation_id AND estimations.user_id = auth.uid()
   )
 );
+
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own chat messages" ON public.chat_messages FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own chat messages" ON public.chat_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own chat messages" ON public.chat_messages FOR DELETE USING (auth.uid() = user_id);
 
 -- Catalog tables are Public/Read-Only
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;

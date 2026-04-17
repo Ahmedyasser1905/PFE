@@ -1,5 +1,5 @@
 import express from 'express';
-import ChatMessage from '../models/ChatMessage';
+import { supabase } from '../config/supabase';
 import { protect, AuthRequest } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
 import { sendChatSchema } from '../validators/schemas';
@@ -14,25 +14,27 @@ router.use(protect);
 router.post('/', validateBody(sendChatSchema), async (req: AuthRequest, res) => {
     try {
         const { message, sessionId: providedSessionId } = req.body;
-        const userId = req.user!._id;
+        const userId = req.user!.id; // Supabase UUID
         const sessionId = providedSessionId || crypto.randomUUID();
 
-        // Save user message
-        await ChatMessage.create({
-            userId,
+        // 1. Save user message in Supabase
+        await supabase.from('chat_messages').insert({
+            user_id: userId,
             role: 'user',
             content: message,
-            sessionId,
+            session_id: sessionId,
         });
 
-        // Get conversation history for this session (last 20 messages for context)
-        const history = await ChatMessage.find({ userId, sessionId })
-            .sort({ createdAt: 1 })
-            .limit(20)
-            .select('role content')
-            .lean();
+        // 2. Get conversation history (last 20 messages)
+        const { data: history } = await supabase
+            .from('chat_messages')
+            .select('role, content')
+            .eq('user_id', userId)
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true })
+            .limit(20);
 
-        const anthropicMessages = history.map(m => ({
+        const anthropicMessages = (history || []).map(m => ({
             role: m.role as 'user' | 'assistant',
             content: m.content,
         }));
@@ -44,7 +46,6 @@ router.post('/', validateBody(sendChatSchema), async (req: AuthRequest, res) => 
         let assistantContent: string;
 
         if (!anthropicApiKey) {
-            // Fallback response when API key is not configured
             assistantContent = "Le service AI n'est pas configuré. Veuillez contacter l'administrateur pour configurer la clé API Anthropic.";
             console.warn('[Chat] ANTHROPIC_API_KEY not set — returning fallback response');
         } else {
@@ -63,7 +64,7 @@ router.post('/', validateBody(sendChatSchema), async (req: AuthRequest, res) => 
                 }),
             });
 
-            const data = await response.json();
+            const data = await response.json() as any;
 
             if (!response.ok) {
                 console.error('[Chat] Anthropic API error:', data);
@@ -75,12 +76,12 @@ router.post('/', validateBody(sendChatSchema), async (req: AuthRequest, res) => 
             assistantContent = data.content?.[0]?.text || 'No response from AI';
         }
 
-        // Save assistant response
-        await ChatMessage.create({
-            userId,
+        // 3. Save assistant response in Supabase
+        await supabase.from('chat_messages').insert({
+            user_id: userId,
             role: 'assistant',
             content: assistantContent,
-            sessionId,
+            session_id: sessionId,
         });
 
         res.json({
@@ -99,21 +100,30 @@ router.post('/', validateBody(sendChatSchema), async (req: AuthRequest, res) => 
 // ─── GET /api/chat/history — Get chat history ─────────────────────────────────
 router.get('/history', async (req: AuthRequest, res) => {
     try {
-        const userId = req.user!._id;
+        const userId = req.user!.id;
         const sessionId = req.query.sessionId as string;
 
-        const filter: any = { userId };
+        let query = supabase
+            .from('chat_messages')
+            .select('role, content, session_id, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true })
+            .limit(100);
+
         if (sessionId) {
-            filter.sessionId = sessionId;
+            query = query.eq('session_id', sessionId);
         }
 
-        const messages = await ChatMessage.find(filter)
-            .sort({ createdAt: 1 })
-            .limit(100)
-            .select('role content sessionId createdAt')
-            .lean();
+        const { data: messages, error } = await query;
+        if (error) throw error;
 
-        res.json({ messages });
+        res.json({ 
+            messages: (messages || []).map(m => ({
+                ...m,
+                sessionId: m.session_id,
+                createdAt: m.created_at
+            }))
+        });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -122,15 +132,16 @@ router.get('/history', async (req: AuthRequest, res) => {
 // ─── DELETE /api/chat/history — Clear chat history ────────────────────────────
 router.delete('/history', async (req: AuthRequest, res) => {
     try {
-        const userId = req.user!._id;
+        const userId = req.user!.id;
         const sessionId = req.query.sessionId as string;
 
-        const filter: any = { userId };
+        let query = supabase.from('chat_messages').delete().eq('user_id', userId);
         if (sessionId) {
-            filter.sessionId = sessionId;
+            query = query.eq('session_id', sessionId);
         }
 
-        await ChatMessage.deleteMany(filter);
+        const { error } = await query;
+        if (error) throw error;
 
         res.json({ message: 'Chat history cleared' });
     } catch (error: any) {

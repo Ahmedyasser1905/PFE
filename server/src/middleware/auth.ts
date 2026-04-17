@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
+import { supabase } from '../config/supabase';
 
 export interface AuthRequest extends Request {
-    user?: IUser;
+    user?: any; // Temporarily using any to support hybrid _id and id during migration
 }
 
 /**
@@ -29,14 +30,25 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
         }
 
         const decoded = jwt.verify(token, secret) as { id: string; role: string };
-        const user = await User.findById(decoded.id).select('-passwordHash -resetOTP -resetOTPExpires -verificationToken');
+        
+        // Fetch from Supabase profiles
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', decoded.id)
+            .single();
 
-        if (!user) {
+        if (error || !profile) {
             res.status(401).json({ status: 'error', message: 'Not authorized — user not found' });
             return;
         }
 
-        req.user = user;
+        // Map Supabase profile to the IUser-like structure expected by existing code
+        req.user = {
+            ...profile,
+            _id: profile.id, // Compatibility for existing code
+            fullName: profile.full_name,
+        } as any;
         next();
     } catch (error: any) {
         if (error.name === 'TokenExpiredError') {
@@ -68,21 +80,42 @@ export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFu
             const secret = process.env.JWT_SECRET;
             
             if (secret) {
-                const decoded = jwt.verify(token, secret) as { id: string; role: string };
-                const user = await User.findById(decoded.id).select('-passwordHash');
-                if (user) {
-                    req.user = user;
-                    return next();
+                try {
+                    const decoded = jwt.verify(token, secret) as { id: string; role: string };
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', decoded.id)
+                        .single();
+
+                    if (profile) {
+                        req.user = {
+                            ...profile,
+                            _id: profile.id,
+                            fullName: profile.full_name
+                        } as any;
+                        return next();
+                    }
+                } catch (err) {
+                    // Ignore JWT errors in optional auth
                 }
             }
         }
 
         // If x-user-id is passed but no valid JWT
         if (xUserId && typeof xUserId === 'string') {
-            // we'll attempt to find it just in case
-            const user = await User.findById(xUserId).select('-passwordHash');
-            if (user) {
-                req.user = user;
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', xUserId)
+                .single();
+
+            if (profile) {
+                req.user = {
+                    ...profile,
+                    _id: profile.id,
+                    fullName: profile.full_name
+                } as any;
             }
         }
 

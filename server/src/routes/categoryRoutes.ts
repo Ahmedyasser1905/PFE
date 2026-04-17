@@ -1,17 +1,29 @@
 import { Router, Request, Response } from 'express';
-import Category from '../models/Category';
+import { supabase } from '../config/supabase';
 
 const router = Router();
+
+// Helper to map Supabase to Mongo-style
+const mapToMongo = (row: any) => ({
+    ...row,
+    _id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+});
 
 // GET /categories (Returns ROOTs nested with BRANCHes)
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const roots = await Category.find({ type: 'ROOT' }).lean();
-        const branches = await Category.find({ type: 'BRANCH' }).lean();
+        const { data: roots, error: rootError } = await supabase.from('categories').select('*').eq('type', 'ROOT');
+        const { data: branches, error: branchError } = await supabase.from('categories').select('*').eq('type', 'BRANCH');
 
-        const data = roots.map(root => ({
-            ...root,
-            children: branches.filter(b => b.parent_id === root._id)
+        if (rootError || branchError) throw (rootError || branchError);
+
+        const data = (roots || []).map(root => ({
+            ...mapToMongo(root),
+            children: (branches || [])
+                .filter(b => b.parent_id === root.id)
+                .map(mapToMongo)
         }));
 
         res.json({
@@ -27,11 +39,17 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id/children', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const leaves = await Category.find({ parent_id: id, type: 'LEAF' }).lean();
+        const { data: leaves, error } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('parent_id', id)
+            .eq('type', 'LEAF');
+
+        if (error) throw error;
 
         res.json({
             status: 'ok',
-            data: leaves
+            data: (leaves || []).map(mapToMongo)
         });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -42,15 +60,20 @@ router.get('/:id/children', async (req: Request, res: Response) => {
 router.get('/:id/leaf', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const leaf = await Category.findOne({ _id: id, type: 'LEAF' }).lean();
+        const { data: leaf, error } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('id', id)
+            .eq('type', 'LEAF')
+            .single();
 
-        if (!leaf) {
+        if (error || !leaf) {
             return res.status(404).json({ status: 'error', message: 'Category not found' });
         }
 
         res.json({
             status: 'ok',
-            data: leaf
+            data: mapToMongo(leaf)
         });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
