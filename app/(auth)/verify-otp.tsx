@@ -1,29 +1,35 @@
-﻿import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ShieldCheck, ArrowLeft } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { theme } from '../../constants/theme';
-import { Logo } from '../../components/Logo';
-import { BaseInput } from '../../components/BaseInput';
-import { BaseButton } from '../../components/BaseButton';
-import { authApi } from '../../api/api';
+import { theme } from '~/constants/theme';
+import { Logo } from '~/components/ui/Logo';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { authApi } from '~/api/api';
+import { useFeedback } from '~/context/FeedbackContext';
 export default function VerifyOtpScreen() {
     const { email } = useLocalSearchParams();
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
+    const { showFeedback } = useFeedback();
     const handleVerifyOtp = async () => {
-        if (!otp || otp.length !== 6) {
-            Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+        if (!otp) {
+            showFeedback({ title: 'Error', message: 'Please enter the reset token', type: 'warning' });
             return;
         }
         try {
             setLoading(true);
             await authApi.verifyOtp(email as string, otp);
-            router.push(`/reset-password?email=${encodeURIComponent(email as string)}&otp=${encodeURIComponent(otp)}`);
+            router.push(`/reset-password?email=${encodeURIComponent(email as string)}&token=${encodeURIComponent(otp)}`);
         } catch (error: any) {
-            console.error('OTP verification failed:', error.response?.data?.message || error.message);
-            Alert.alert('Error', error.response?.data?.message || 'Invalid or expired OTP');
+            console.error('Token verification failed:', error.response?.data?.message || error.message);
+            showFeedback({
+                title: 'Error',
+                message: JSON.stringify(error?.response?.data || error?.message || 'Invalid or expired token'),
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -46,18 +52,16 @@ export default function VerifyOtpScreen() {
                         <Logo size="md" />
                     </View>
                     <View style={styles.content}>
-                        <Text style={styles.title}>Verify OTP</Text>
+                        <Text style={styles.title}>Verify Token</Text>
                         <Text style={styles.subtitle}>
-                            Enter the 6-digit code sent to {email}.
+                            Enter the reset token sent to {email}.
                         </Text>
                         <BaseInput
-                            label="Verification Code"
-                            placeholder="123456"
+                            label="Reset Token"
+                            placeholder="Enter your hex token"
                             icon={ShieldCheck}
                             value={otp}
                             onChangeText={setOtp}
-                            keyboardType="number-pad"
-                            maxLength={6}
                         />
                         <BaseButton
                             title="Verify Code"
@@ -113,3 +117,4 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing.lg,
     },
 });
+

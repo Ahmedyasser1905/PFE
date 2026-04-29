@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Home, Compass, Map } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../constants/theme';
-import { BaseButton } from '../components/BaseButton';
+import { theme } from '~/constants/theme';
+import { BaseButton } from '~/components/ui/BaseButton';
 export default function NotFoundScreen() {
     const router = useRouter();
     return (
@@ -117,3 +117,4 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
 });
+

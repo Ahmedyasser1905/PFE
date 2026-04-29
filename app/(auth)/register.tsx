@@ -1,16 +1,18 @@
-﻿import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
-import { theme } from '../../constants/theme';
-import { Logo } from '../../components/Logo';
-import { BaseInput } from '../../components/BaseInput';
-import { BaseButton } from '../../components/BaseButton';
-import { authApi } from '../../api/api';
-import { useAuth } from '../../context/AuthContext';
+import { theme } from '~/constants/theme';
+import { Logo } from '~/components/ui/Logo';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { useAuth } from '~/context/AuthContext';
+import { authApi } from '~/api/api';
+import { useFeedback } from '~/context/FeedbackContext';
+
 export default function RegisterScreen() {
-    const [fullName, setFullName] = useState('');
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,35 +20,42 @@ export default function RegisterScreen() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { login, user, loading: authLoading } = useAuth();
+    const { showFeedback } = useFeedback();
     useEffect(() => {
         if (user && !authLoading) {
             router.replace('/');
         }
     }, [user, authLoading]);
     const handleRegister = async () => {
-        if (!fullName || !email || !password) {
-            alert('Please fill in all fields');
+        if (!name || !email || !password) {
+            showFeedback({ title: 'Error', message: 'Please fill in all fields', type: 'warning' });
             return;
         }
         if (password !== confirmPassword) {
-            alert('Passwords do not match');
+            showFeedback({ title: 'Error', message: 'Passwords do not match', type: 'warning' });
             return;
         }
         if (!agreed) {
-            alert('You must agree to the Terms and Conditions');
+            showFeedback({ title: 'Error', message: 'You must agree to the Terms and Conditions', type: 'warning' });
             return;
         }
         try {
             setLoading(true);
-            const response = await authApi.register({ fullName, email, password });
-            Alert.alert(
-                'Verify your email',
-                response.data.message || 'Please check your email to verify your account.',
-                [{ text: 'OK', onPress: () => router.replace('/login?mode=form') }]
-            );
+            const response = await authApi.register({
+                name,
+                email,
+                password,
+            });
+            
+            await login(response.user, response.accessToken, response.refreshToken);
+            router.replace('/');
         } catch (error: any) {
-            console.error('Registration failed:', error.response?.data?.message || error.message);
-            Alert.alert('Registration failed', error.response?.data?.message || 'Server error');
+            console.error('Registration failed:', error?.message);
+            showFeedback({
+                title: 'Registration failed',
+                message: JSON.stringify(error?.response?.data || error?.message || 'Server error'),
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -59,7 +68,7 @@ export default function RegisterScreen() {
             >
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.header}>
-                        {}
+                        { }
                     </View>
                     <View style={styles.content}>
                         <Text style={styles.title}>Create your account</Text>
@@ -70,8 +79,8 @@ export default function RegisterScreen() {
                             label="Full Name"
                             placeholder="John Doe"
                             icon={User}
-                            value={fullName}
-                            onChangeText={setFullName}
+                            value={name}
+                            onChangeText={setName}
                         />
                         <BaseInput
                             label="Email Address"
@@ -169,7 +178,7 @@ const styles = StyleSheet.create({
     checkbox: {
         width: 20,
         height: 20,
-        borderRadius: 10, 
+        borderRadius: 10,
         borderWidth: 2,
         borderColor: theme.colors.border,
         justifyContent: 'center',

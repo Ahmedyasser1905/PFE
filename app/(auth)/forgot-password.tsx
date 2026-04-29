@@ -1,32 +1,39 @@
-﻿import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { theme } from '../../constants/theme';
-import { Logo } from '../../components/Logo';
-import { BaseInput } from '../../components/BaseInput';
-import { BaseButton } from '../../components/BaseButton';
-import { authApi } from '../../api/api';
+import { theme } from '~/constants/theme';
+import { Logo } from '~/components/ui/Logo';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { authApi } from '~/api/api';
+import { useFeedback } from '~/context/FeedbackContext';
 export default function ForgotPasswordScreen() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
+    const { showFeedback } = useFeedback();
     const handleResetRequest = async () => {
         if (!email) {
-            Alert.alert('Error', 'Please enter your email address');
+            showFeedback({ title: 'Error', message: 'Please enter your email address', type: 'warning' });
             return;
         }
         try {
             setLoading(true);
             await authApi.forgotPassword(email);
-            Alert.alert(
-                'OTP Sent',
-                'A 6-digit verification code has been sent to your email.',
-                [{ text: 'OK', onPress: () => router.push(`/verify-otp?email=${encodeURIComponent(email)}`) }]
-            );
+            showFeedback({
+                title: 'OTP Sent',
+                message: 'A 6-digit verification code has been sent to your email.',
+                type: 'success',
+                onPrimary: () => router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
+            });
         } catch (error: any) {
             console.error('Forgot password failed:', error.response?.data?.message || error.message);
-            Alert.alert('Error', error.response?.data?.message || 'Something went wrong');
+            showFeedback({
+                title: 'Error',
+                message: JSON.stringify(error?.response?.data || error?.message || 'Something went wrong'),
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -116,3 +123,4 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing.lg,
     },
 });
+

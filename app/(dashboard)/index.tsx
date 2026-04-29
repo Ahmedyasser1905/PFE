@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,227 +18,241 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 
-import { ProjectCard } from '~/components/projectscard';
+import { ProjectCard } from '~/components/features/projects/ProjectsCard';
+import type { Project } from '~/api/types';
+import { useLanguage } from '~/context/LanguageContext';
+import { useProjects } from '~/hooks/useProjects';
+import { useSubscriptionContext } from '~/context/SubscriptionContext';
 import { estimationApi } from '~/api/api';
+import { theme } from '~/constants/theme';
+import { Skeleton } from '~/components/ui/Skeleton';
+import { EmptyState } from '~/components/ui/EmptyState';
+import { ErrorScreen } from '~/components/ui/ErrorScreen';
+import { PremiumModal } from '~/components/ui/PremiumModal';
 
 type FilterType = 'All' | 'Active' | 'Completed';
+const FILTERS: FilterType[] = ['All', 'Active', 'Completed'];
 
-interface Project {
-  _id: string;
-  name: string;
-  description?: string;
-  status: 'Draft' | 'In Progress' | 'Completed' | 'On Hold';
-  image?: string;
-  location?: string;
-  type: string;
-  budget?: number;
-  progress: number;
-  deadline?: string;
-  createdAt: string;
+// ─── Stat Sub-Component ───────────────────────────────────────────────────────
+
+interface StatProps {
+  icon: any;
+  label: string;
+  value: number;
+  color: string;
+  isArabic?: boolean;
 }
 
-interface Stats {
-  totalProjects: number;
-  completedProjects: number;
-  activeProjects: number;
-  totalCalculations: number;
-  totalCategories: number;
-}
+const Stat = React.memo<StatProps>(({ icon: Icon, label, value, color, isArabic }) => (
+  <View style={[styles.statCard, isArabic && styles.rtlStatCard]}>
+    <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
+      <Icon size={18} color={color} />
+    </View>
+    <Text style={[styles.statValue, isArabic && styles.rtlText]}>{value}</Text>
+    <Text style={[styles.statLabel, isArabic && styles.rtlText]}>{label}</Text>
+  </View>
+));
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [filter, setFilter] = useState<FilterType>('All');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { t, language } = useLanguage();
+  const isArabic = language === 'ar';
 
-  const fetchData = useCallback(async () => {
-    try {
-      setError(null);
-      const projectsRes = await estimationApi.listProjects();
-      
-      // Using fallback stats until stats API is available on estimationApi
-      const statsRes = { data: { totalProjects: projectsRes.length || 0, completedProjects: projectsRes.filter((p: any) => p.status === 'Completed').length || 0, activeProjects: projectsRes.filter((p: any) => p.status !== 'Completed').length || 0, totalCalculations: 0, totalCategories: 0 } };
-      // estimationApi already unwraps the { status: 'ok', data: ... }
-      const projectsArray = Array.isArray(projectsRes) ? projectsRes : (projectsRes?.projects || []);
-      setProjects(projectsArray);
-      setStats(statsRes.data);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Failed to load data';
-      setError(msg);
-      console.error('[Dashboard] Error:', msg);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const { projects, loading, refreshing, error, refresh } = useProjects();
+  const { canCreateProject, hasSubscription, isSubscriptionActive } = useSubscriptionContext();
+
+  const [filter, setFilter] = useState<FilterType>('All');
+  const [categoryCount, setCategoryCount] = useState(0);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+  // Fetch category count independently (doesn't affect project state)
+  React.useEffect(() => {
+    estimationApi
+      .getCategories()
+      .then((cats) => setCategoryCount(Array.isArray(cats) ? cats.length : 0))
+      .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData();
-  }, [fetchData]);
-
-  const filteredProjects = useMemo(() => {
+  const filteredProjects = useMemo<Project[]>(() => {
     if (filter === 'All') return projects;
-    if (filter === 'Active') return projects.filter(p => p.status === 'In Progress' || p.status === 'Draft');
-    return projects.filter(p => p.status === 'Completed');
-  }, [filter, projects]);
+    return projects.filter((p) => {
+      if (filter === 'Active') return p.status === 'active';
+      if (filter === 'Completed') return p.status === 'completed';
+      return true;
+    });
+  }, [projects, filter]);
 
-  // Map to ProjectCard expected shape
-  const mappedProjects = useMemo(() =>
-    filteredProjects.map(p => ({
-      id: p._id,
-      title: p.name,
-      description: p.description || '',
-      status: (p.status === 'Completed' ? 'Completed' : 'Active') as 'Active' | 'Completed',
-      image: p.image || 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=400',
-      client: p.location || p.type,
-      dueDate: p.deadline ? new Date(p.deadline).toLocaleDateString() : '-',
-      uuid: `PRJ-${p._id.slice(-4).toUpperCase()}`,
-    })),
-  [filteredProjects]);
+  const stats = useMemo(
+    () => ({
+      total: projects.length,
+      completed: projects.filter((p) => p.status === 'completed').length,
+      categories: categoryCount,
+    }),
+    [projects, categoryCount]
+  );
 
-  if (loading) {
+  const handleSetFilter = useCallback((f: FilterType) => setFilter(f), []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Project }) => <ProjectCard project={item} />,
+    []
+  );
+
+  const keyExtractor = useCallback((item: Project) => item.projectId, []);
+
+  // Show skeleton only on initial load, not on refresh
+  if (loading && !refreshing && projects.length === 0) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading projects...</Text>
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <Skeleton width="100%" height={120} borderRadius={20} style={{ marginBottom: 20 }} />
+          <View style={styles.stats}>
+            <Skeleton width="30%" height={80} borderRadius={16} />
+            <Skeleton width="30%" height={80} borderRadius={16} />
+            <Skeleton width="30%" height={80} borderRadius={16} />
+          </View>
+          <View style={styles.filterRow}>
+            <Skeleton width={80} height={32} borderRadius={10} />
+            <Skeleton width={80} height={32} borderRadius={10} />
+            <Skeleton width={80} height={32} borderRadius={10} />
+          </View>
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} width="100%" height={100} borderRadius={16} style={{ marginBottom: 12 }} />
+          ))}
+        </View>
       </View>
+    );
+  }
+
+  if (error && projects.length === 0) {
+    return (
+      <ErrorScreen
+        type={error.includes('Network') ? 'network' : 'unknown'}
+        message={error}
+        onRetry={() => refresh()}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={mappedProjects}
-        keyExtractor={(item) => item.id}
+        data={filteredProjects}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        removeClippedSubviews
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
         }
-
         ListHeaderComponent={
           <>
-            {/* Error Banner */}
-            {error && (
-              <Pressable style={styles.errorBanner} onPress={fetchData}>
-                <AlertCircle size={16} color="#dc2626" />
-                <Text style={styles.errorText}>{error}</Text>
-                <Text style={styles.retryText}>Tap to retry</Text>
-              </Pressable>
-            )}
-
-            {/* CREATE */}
-            <Pressable style={styles.createCard} onPress={() => router.push('/projects/CreateProject')}>
-              <Text style={styles.createTitle}>New Project</Text>
-              <Text style={styles.createSub}>Create a new project</Text>
-              <View style={styles.createBtn}>
-                <Plus size={20} color="#2563eb" />
-                <Text style={styles.createBtnText}>Create</Text>
+            <Pressable
+              style={[styles.createCard, isArabic && styles.rtlCreateCard]}
+              onPress={() => {
+                if (hasSubscription && !canCreateProject) {
+                  setShowPremiumModal(true);
+                  return;
+                }
+                router.push('/projects/create');
+              }}
+            >
+              <Text style={[styles.createTitle, isArabic && styles.rtlText]}>
+                {t('home.new_project')}
+              </Text>
+              <Text style={[styles.createSub, isArabic && styles.rtlText]}>
+                {t('home.start_estimation')}
+              </Text>
+              <View style={[styles.createBtn, isArabic && styles.rtlCreateBtn]}>
+                <Plus size={20} color={theme.colors.primary} />
+                <Text style={styles.createBtnText}>{t('home.create')}</Text>
               </View>
             </Pressable>
 
-            {/* STATS — Now from API */}
-            <View style={styles.stats}>
-              <Stat icon={HardHat} label="Projects" value={String(stats?.totalProjects ?? 0)} color="#2563eb" />
-              <Stat icon={CheckCircle2} label="Completed" value={String(stats?.completedProjects ?? 0)} color="#10b981" />
-              <Stat icon={Building2} label="Categories" value={String(stats?.totalCategories ?? 0)} color="#db8a11" />
+            <View style={[styles.stats, isArabic && styles.rtlStats]}>
+              <Stat
+                icon={HardHat}
+                label={t('dashboard.projects_stat')}
+                value={stats.total}
+                color={theme.colors.primary}
+                isArabic={isArabic}
+              />
+              <Stat
+                icon={CheckCircle2}
+                label={t('dashboard.completed_stat')}
+                value={stats.completed}
+                color={theme.colors.success}
+                isArabic={isArabic}
+              />
+              <Stat
+                icon={Building2}
+                label={t('dashboard.categories_stat')}
+                value={stats.categories}
+                color={theme.colors.warning}
+                isArabic={isArabic}
+              />
             </View>
 
-            {/* FILTER */}
-            <View style={styles.filterRow}>
-              {(['All', 'Active', 'Completed'] as FilterType[]).map(f => (
+            <View style={[styles.filterRow, isArabic && styles.rtlFilterRow]}>
+              {FILTERS.map((f) => (
                 <Pressable
                   key={f}
-                  onPress={() => setFilter(f)}
-                  style={[
-                    styles.filterBtn,
-                    filter === f && styles.filterActive
-                  ]}
+                  onPress={() => handleSetFilter(f)}
+                  style={[styles.filterBtn, filter === f && styles.filterActive]}
                 >
-                  <Text style={[
-                    styles.filterText,
-                    filter === f && styles.filterTextActive
-                  ]}>
-                    {f}
+                  <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                    {t(`dashboard.${f.toLowerCase()}_filter`)}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </>
         }
-
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/projects/${item.id}`)}>
-            <ProjectCard project={item} />
-          </Pressable>
-        )}
-
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <FolderOpen size={40} color="#94a3b8" />
-            <Text style={styles.emptyText}>
-              {error ? 'Could not load projects' : 'No projects found'}
-            </Text>
-            {!error && (
-              <Pressable
-                style={styles.emptyCreateBtn}
-                onPress={() => router.push('/projects/CreateProject')}
-              >
-                <Text style={styles.emptyCreateText}>Create your first project</Text>
-              </Pressable>
-            )}
-          </View>
+          <EmptyState
+            title={t('dashboard.no_projects_found')}
+            description={t('home.start_estimation')}
+            actionLabel={t('home.new_project')}
+            onAction={() => router.push('/projects/create')}
+          />
         }
+      />
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onUpgrade={() => {
+          setShowPremiumModal(false);
+          router.push('/settings');
+        }}
+        title={t('dashboard.limit_title')}
+        description={t('dashboard.limit_message')}
       />
     </View>
   );
 }
 
-// Stat Component
-const Stat = ({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) => (
-  <View style={styles.statCard}>
-    <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-      <Icon size={18} color={color} />
-    </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-
-// Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16 },
-  loadingText: { color: '#64748b', marginTop: 12, fontSize: 14 },
-
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: { color: '#dc2626', fontSize: 13, flex: 1 },
-  retryText: { color: '#2563eb', fontSize: 12, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+  content: { padding: theme.spacing.lg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   createCard: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
   },
+  rtlCreateCard: { alignItems: 'flex-end' },
   createTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   createSub: { color: '#dbeafe', marginBottom: 10 },
   createBtn: {
@@ -250,52 +264,46 @@ const styles = StyleSheet.create({
     gap: 5,
     width: 100,
   },
-  createBtnText: { color: '#2563eb', fontWeight: 'bold' },
+  rtlCreateBtn: { flexDirection: 'row-reverse' },
+  createBtnText: { color: theme.colors.primary, fontWeight: 'bold' },
 
-  stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 16,
-    width: '30%',
-  },
-  statIcon: {
-    width: 30,
-    height: 30,
-    padding: 6,
-    borderRadius: 10,
-    marginBottom: 6,
-  },
+  stats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  rtlStats: { flexDirection: 'row-reverse' },
+
+  statCard: { backgroundColor: '#fff', padding: 12, borderRadius: 16, width: '30%' },
+  rtlStatCard: { alignItems: 'flex-end' },
+  statIcon: { width: 30, height: 30, padding: 6, borderRadius: 10, marginBottom: 6 },
   statValue: { fontWeight: 'bold' },
-  statLabel: { fontSize: 10, color: '#64748b' },
+  statLabel: { fontSize: 10, color: theme.colors.textSecondary },
 
-  filterRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
+  filterRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  rtlFilterRow: { flexDirection: 'row-reverse' },
   filterBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: '#e2e8f0',
     borderRadius: 10,
   },
-  filterActive: { backgroundColor: '#2563eb' },
+  filterActive: { backgroundColor: theme.colors.primary },
   filterText: { color: '#334155' },
   filterTextActive: { color: '#fff' },
 
   empty: { alignItems: 'center', marginTop: 40 },
-  emptyText: { color: '#64748b', marginTop: 10 },
-  emptyCreateBtn: {
-    marginTop: 16,
-    backgroundColor: '#2563eb',
+  emptyText: { color: theme.colors.textSecondary, marginTop: 10 },
+
+  loadingText: { marginTop: 12, color: theme.colors.textSecondary },
+  rtlText: { textAlign: 'right' },
+  errorText: {
+    color: theme.colors.error,
+    textAlign: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 20,
+  },
+  retryBtn: {
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  emptyCreateText: { color: '#fff', fontWeight: '600' },
+  retryBtnText: { color: '#fff', fontWeight: 'bold' },
 });

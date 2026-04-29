@@ -1,0 +1,101 @@
+{
+  "common": {
+    "hello": "Hello",
+    "welcome": "Welcome",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "logout": "Log Out",
+    "project_details": "Project Details",
+    "calc_engine": "Development Engine",
+    "all_activities": "Estimations"
+  },
+  "navigation": {
+    "home": "Home",
+    "projects": "Projects",
+    "history": "History",
+    "settings": "Settings",
+    "chat": "AI Assistant"
+  },
+  "home": {
+    "new_project": "New Project",
+    "start_estimation": "Initialize a new estimation workspace",
+    "create": "Create",
+    "projects_stat": "Projects",
+    "completed_stat": "Completed",
+    "categories_stat": "Categories",
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed"
+  },
+  "settings": {
+    "profile": "Profile",
+    "personal_info": "Personal Information",
+    "notifications": "Notification Settings",
+    "language": "App Language",
+    "security": "Security & Password",
+    "subscription": "Subscription Plan",
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy",
+    "help": "Help & Support",
+    "choose_language": "Choose Language"
+  },
+  "personal_info": {
+    "title": "Personal Information",
+    "tap_to_change": "Tap to change profile photo",
+    "account_details": "Account Details",
+    "full_name": "Full Name",
+    "name_placeholder": "Enter your full name",
+    "email_address": "Email Address",
+    "read_only": "Read-only",
+    "save_changes": "Save Changes",
+    "name_empty": "Name cannot be empty.",
+    "save_success": "Profile updated successfully.",
+    "save_error": "Failed to update profile.",
+    "permission_gallery": "Please allow access to your photo library to change your profile picture.",
+    "permission_camera": "Please allow camera access to take a profile picture.",
+    "change_photo": "Change Profile Photo",
+    "photo_source": "Choose a source for your new profile photo.",
+    "camera": "Camera",
+    "photo_library": "Photo Library"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "preferences": "Notification Preferences",
+    "push_title": "Push Notifications",
+    "push_sub": "Receive alerts on your device",
+    "email_title": "Email Notifications",
+    "email_sub": "Get updates sent to your email",
+    "projects_title": "Project Updates",
+    "projects_sub": "Notifications when a project changes",
+    "promo_title": "Promotions & News",
+    "promo_sub": "Offers and BuildEst updates",
+    "info": "Your preferences are saved locally on this device. You can change them at any time."
+  },
+  "help": {
+    "title": "Help & Support",
+    "hero_title": "How can we help?",
+    "hero_sub": "Find answers to common questions below, or reach out to our support team.",
+    "faq_label": "Frequently Asked Questions",
+    "contact_label": "Contact Support",
+    "email_us": "Email Us",
+    "whatsapp": "WhatsApp",
+    "whatsapp_sub": "Chat with support",
+    "version": "BuildEst © 2024"
+  },
+  "dashboard": {
+    "projects_stat": "Projects",
+    "completed_stat": "Completed",
+    "categories_stat": "Categories",
+    "all_filter": "All",
+    "active_filter": "Active",
+    "completed_filter": "Completed",
+    "syncing": "Syncing Construction Data...",
+    "no_projects_found": "No projects found",
+    "retry_sync": "Retry Sync",
+    "failed_sync": "Failed to sync projects"
+  }
+}
+

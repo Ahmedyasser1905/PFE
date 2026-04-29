@@ -1,0 +1,57 @@
+{
+  "common": {
+    "hello": "مرحباً",
+    "welcome": "أهلاً بك",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "retry": "إعادة المحاولة",
+    "logout": "تسجيل الخروج",
+    "project_details": "تفاصيل المشروع",
+    "calc_engine": "محرك التطوير",
+    "all_activities": "التقديرات"
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "projects": "المشاريع",
+    "history": "السجل",
+    "settings": "الإعدادات",
+    "chat": "المساعد الذكي"
+  },
+  "home": {
+    "new_project": "مشروع جديد",
+    "start_estimation": "بدء مساحة عمل تقديرية جديدة",
+    "create": "إنشاء",
+    "projects_stat": "المشاريع",
+    "completed_stat": "المكتملة",
+    "categories_stat": "الفئات",
+    "all": "الكل",
+    "active": "نشط",
+    "completed": "مكتمل"
+  },
+  "settings": {
+    "profile": "الحساب",
+    "personal_info": "المعلومات الشخصية",
+    "notifications": "إعدادات الإشعارات",
+    "language": "لغة التطبيق",
+    "security": "الأمان وكلمة المرور",
+    "subscription": "خطة الاشتراك",
+    "terms": "الشروط والأحكام",
+    "privacy": "سياسة الخصوصية",
+    "help": "المساعدة والدعم",
+    "choose_language": "اختر اللغة"
+  },
+  "dashboard": {
+    "projects_stat": "المشاريع",
+    "completed_stat": "المكتملة",
+    "categories_stat": "الفئات",
+    "all_filter": "الكل",
+    "active_filter": "نشط",
+    "completed_filter": "مكتمل",
+    "syncing": "جاري مزامنة بيانات البناء...",
+    "no_projects_found": "لم يتم العثور على مشاريع",
+    "retry_sync": "إعادة المزامنة",
+    "failed_sync": "فشل في مزامنة المشاريع"
+  }
+}

@@ -1,15 +1,18 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, Lock, ArrowRight, X } from 'lucide-react-native';
-import { theme } from '../../constants/theme';
-import { Logo } from '../../components/Logo';
-import { BaseInput } from '../../components/BaseInput';
-import { BaseButton } from '../../components/BaseButton';
-import { authApi, updateApiBaseUrl } from '../../api/api';
-import { useAuth } from '../../context/AuthContext';
-import { storage } from '../../utils/storage';
+import { theme } from '~/constants/theme';
+import { Logo } from '~/components/ui/Logo';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { useAuth } from '~/context/AuthContext';
+import { authApi } from '~/api/api';
+import { parseError } from '~/utils/errorHandler';
+import { useLanguage } from '~/context/LanguageContext';
+import { useFeedback } from '~/context/FeedbackContext';
+
 export default function LoginScreen() {
     const params = useLocalSearchParams();
     const [showLoginForm, setShowLoginForm] = useState(params.mode === 'form');
@@ -18,17 +21,37 @@ export default function LoginScreen() {
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
+    const { t, language } = useLanguage();
+    const isArabic = language === 'ar';
     const router = useRouter();
+    const { showFeedback } = useFeedback();
     const handleLogin = async () => {
         if (!email || !password) return;
         try {
             setLoading(true);
-            const response = await authApi.login({ email, password });
-            const { user, token } = response.data;
-            await login(user, token);
-            router.replace('/');
+            console.log('[Login] Attempting login for:', email);
+            
+            const response = await authApi.login({
+                email,
+                password,
+            });
+
+            if (!response || !response.accessToken || !response.user) {
+                throw new Error('Server returned an invalid response structure');
+            }
+            
+            console.log('[Login] Success! Storing auth data...');
+            await login(response.user, response.accessToken, response.refreshToken);
+            
+            console.log('[Login] Auth data stored, navigating to dashboard...');
+            router.replace('/(dashboard)');
         } catch (error: any) {
-            alert('Login failed: ' + (error.response?.data?.message || 'Server error'));
+            console.error('[Login] Error:', error);
+            showFeedback({
+                title: t('common.error'),
+                message: parseError(error, 'Server error'),
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -40,24 +63,24 @@ export default function LoginScreen() {
                 <View style={styles.landingContainer}>
                     <View style={styles.landingHeader}>
                         <Logo size="lg" style={styles.landingLogo} />
-                        <View style={styles.landingContent}>
-                            <Text style={styles.landingOverline}>Calculateur de construction</Text>
-                            <Text style={styles.landingTitle}>The construction expert</Text>
+                        <View style={[styles.landingContent, isArabic && styles.rtlItems]}>
+                            <Text style={[styles.landingOverline, isArabic && styles.rtlText]}>{t('auth.landing_overline')}</Text>
+                            <Text style={[styles.landingTitle, isArabic && styles.rtlText]}>{t('auth.landing_title')}</Text>
                         </View>
                     </View>
                     <View style={styles.landingFooter}>
-                        <BaseButton 
-                            title="Get started" 
+                        <BaseButton
+                            title={t('auth.get_started')}
                             onPress={() => router.push('/register')}
                             style={styles.getStartedBtn}
                             textStyle={styles.getStartedBtnText}
                         />
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.loginLink}
                             onPress={() => setShowLoginForm(true)}
                         >
                             <Text style={styles.loginLinkText}>
-                                Log in
+                                {t('auth.login_link')}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -78,49 +101,51 @@ export default function LoginScreen() {
                             <X size={24} color={theme.colors.text} />
                         </Pressable>
                     </View>
-                    <View style={styles.content}>
-                        <Text style={styles.title}>Welcome back</Text>
-                        <Text style={styles.subtitle}>
-                            Log in to manage your construction estimates and projects efficiently.
+                    <View style={[styles.content, isArabic && styles.rtlItems]}>
+                        <Text style={[styles.title, isArabic && styles.rtlText]}>{t('auth.welcome_back')}</Text>
+                        <Text style={[styles.subtitle, isArabic && styles.rtlText]}>
+                            {t('auth.login_desc')}
                         </Text>
                         <BaseInput
-                            label="Email Address"
-                            placeholder="engineer@example.com"
+                            label={t('auth.email_label')}
+                            placeholder={t('auth.email_placeholder')}
                             icon={Mail}
                             value={email}
                             onChangeText={setEmail}
+                            style={isArabic && styles.rtlText}
                         />
                         <View style={styles.passwordContainer}>
                             <BaseInput
-                                label="Password"
-                                placeholder="enter your password"
+                                label={t('auth.password_label')}
+                                placeholder={t('auth.password_placeholder')}
                                 icon={Lock}
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry
+                                style={isArabic && styles.rtlText}
                             />
                             <Link href="/forgot-password" asChild>
-                                <Pressable style={styles.forgotPasswordPressable}>
-                                    <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                                <Pressable style={[styles.forgotPasswordPressable, isArabic && styles.rtlForgot]}>
+                                    <Text style={styles.forgotPasswordText}>{t('auth.forgot_password')}</Text>
                                 </Pressable>
                             </Link>
                         </View>
-                        <TouchableOpacity 
-                            style={styles.rememberContainer}
+                        <TouchableOpacity
+                            style={[styles.rememberContainer, isArabic && styles.rtlRow]}
                             onPress={() => setRememberMe(!rememberMe)}
                             activeOpacity={0.7}
                         >
                             <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
                                 {rememberMe && <View style={styles.checkboxInner} />}
                             </View>
-                            <Text style={styles.rememberText}>Remember for 30 days</Text>
+                            <Text style={[styles.rememberText, isArabic && styles.rtlText]}>{t('auth.remember_me')}</Text>
                         </TouchableOpacity>
-                         <BaseButton
-                            title="Log In"
+                        <BaseButton
+                            title={t('auth.login_btn')}
                             onPress={handleLogin}
                             loading={loading}
                             icon={ArrowRight}
-                            style={styles.loginButton}
+                            style={[styles.loginButton, isArabic && styles.rtlRow]}
                         />
                     </View>
                 </ScrollView>
@@ -135,6 +160,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         padding: theme.spacing.xl,
     },
+    rtlItems: { alignItems: 'flex-end' },
+    rtlText: { textAlign: 'right' },
+    rtlRow: { flexDirection: 'row-reverse' },
+    rtlForgot: { alignSelf: 'flex-start' },
     landingHeader: {
         marginTop: 60,
     },

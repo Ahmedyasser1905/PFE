@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../../constants/theme';
-import { OnboardingCard } from '../../components/OnboardingCard';
+import { theme } from '~/constants/theme';
+import { OnboardingCard } from '~/components/features/auth/OnboardingCard';
 import { Building2, HardHat, ShieldCheck, ChevronRight, PieChart } from 'lucide-react-native';
-import { storage } from '../../utils/storage';
+import { storage } from '~/utils/storage';
 const { width } = Dimensions.get('window');
 const SLIDES = [
     {
@@ -202,3 +202,4 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
 });
+

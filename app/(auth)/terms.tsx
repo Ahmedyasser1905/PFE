@@ -1,9 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, FileText, Gavel } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { theme } from '../../constants/theme';
+import { theme } from '~/constants/theme';
 export default function TermsScreen() {
     const router = useRouter();
     const sections = [
@@ -156,3 +156,4 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     }
 });
+

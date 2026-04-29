@@ -1,43 +1,48 @@
-﻿import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lock, ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { theme } from '../../constants/theme';
-import { Logo } from '../../components/Logo';
-import { BaseInput } from '../../components/BaseInput';
-import { BaseButton } from '../../components/BaseButton';
-import { authApi } from '../../api/api';
+import { theme } from '~/constants/theme';
+import { Logo } from '~/components/ui/Logo';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { authApi } from '~/api/api';
+import { useFeedback } from '~/context/FeedbackContext';
 export default function ResetPasswordScreen() {
-    const { email, otp } = useLocalSearchParams<{ email: string; otp: string }>();
+    const { email, token } = useLocalSearchParams<{ email: string; token: string }>();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    const { showFeedback } = useFeedback();
     const handleResetPassword = async () => {
         if (!password || !confirmPassword) {
-            Alert.alert('Error', 'Please fill in all fields');
+            showFeedback({ title: 'Error', message: 'Please fill in all fields', type: 'warning' });
             return;
         }
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            showFeedback({ title: 'Error', message: 'Passwords do not match', type: 'warning' });
             return;
         }
         if (password.length < 6) {
-            Alert.alert('Error', 'Password must be at least 6 characters');
+            showFeedback({ title: 'Error', message: 'Password must be at least 6 characters', type: 'warning' });
             return;
         }
         try {
             setLoading(true);
-            await authApi.resetPasswordOtp({
-                email: email as string,
-                otp: otp as string,
+            await authApi.resetPassword({
+                token: token!,
                 password
             });
             setSuccess(true);
         } catch (error: any) {
             console.error('Reset password failed:', error.response?.data?.message || error.message);
-            Alert.alert('Error', error.response?.data?.message || 'Invalid or expired OTP');
+            showFeedback({
+                title: 'Error',
+                message: JSON.stringify(error?.response?.data || error?.message || 'Invalid or expired token'),
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -85,7 +90,7 @@ export default function ResetPasswordScreen() {
                         </Text>
                         <BaseInput
                             label="New Password"
-                            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                            placeholder="••••••••"
                             icon={Lock}
                             value={password}
                             onChangeText={setPassword}
@@ -93,7 +98,7 @@ export default function ResetPasswordScreen() {
                         />
                         <BaseInput
                             label="Confirm New Password"
-                            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                            placeholder="••••••••"
                             icon={Lock}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
@@ -164,3 +169,4 @@ const styles = StyleSheet.create({
         width: '100%',
     },
 });
+
