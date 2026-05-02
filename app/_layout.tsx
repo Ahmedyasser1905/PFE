@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { useRouter, useSegments, Slot, useRootNavigationState } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,9 +12,39 @@ import { FeedbackProvider } from '~/context/FeedbackContext';
 import { storage } from '~/utils/storage';
 import { SplashScreenComponent } from '~/components/common/SplashScreenComponent';
 import { STORAGE_KEYS } from '~/constants/config';
+import { primeBaseUrlFromCache, detectBaseUrl } from '~/utils/network';
 
 // Prevent the native splash screen from auto-hiding before we are ready
 SplashScreen.preventAutoHideAsync();
+
+// Kick off backend host detection as early as possible.
+// 1. Hydrate the in-memory cache from AsyncStorage synchronously-ish
+//    so the very first request reuses the last-known good URL.
+// 2. Re-probe in the background so we always converge on a working host
+//    even if the network changed since last launch.
+primeBaseUrlFromCache().finally(() => {
+    detectBaseUrl().catch(() => {
+        // Failures are logged inside detectBaseUrl; nothing else to do here.
+    });
+});
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    } as ViewStyle,
+    splashOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#ffffff',
+        zIndex: 9999,
+    } as ViewStyle,
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        justifyContent: 'center',
+        alignItems: 'center'
+    } as ViewStyle
+});
 
 function RootLayoutNav() {
     const { user, loading: authLoading, isLoggingIn } = useAuth();
@@ -49,17 +79,23 @@ function RootLayoutNav() {
             // Guard: prevent navigation if a redirect is already in flight.
             // This prevents the 'stale' property crash on NativeStackNavigator.
             if (isNavigating.current) return;
+
             try {
                 const inAuthGroup = segments[0] === '(auth)';
+                // Empty segments OR explicit 'index' both represent the root
+                // route. On boot, expo-router reports segments=[] for `/` and
+                // we MUST redirect authed users into `(dashboard)` — bailing
+                // here would leave them on `app/index.tsx` which renders null
+                // (blank white screen).
                 const isRoot = !segments[0] || segments[0] === 'index';
                 const hasCompletedOnboarding = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === 'true';
 
-                console.log('[Layout] Protecting:', { 
-                    segments, 
-                    hasUser: !!user, 
-                    inAuthGroup, 
-                    isRoot, 
-                    hasCompletedOnboarding 
+                console.log('[Layout] Protecting:', {
+                    segments,
+                    hasUser: !!user,
+                    inAuthGroup,
+                    isRoot,
+                    hasCompletedOnboarding
                 });
 
                 // Defer all navigation by one JS tick to let the Navigator
@@ -101,8 +137,8 @@ function RootLayoutNav() {
     const showContent = !authLoading && isAppReady && splashAnimationFinished;
 
     return (
-        <View 
-            style={{ flex: 1, backgroundColor: theme.colors.background }}
+        <View
+            style={styles.root}
         >
             <Slot />
 
@@ -140,17 +176,3 @@ export default function Layout() {
         </GestureHandlerRootView>
     );
 }
-
-const styles = StyleSheet.create({
-    splashOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#ffffff',
-        zIndex: 9999,
-    },
-    loadingContainer: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
-});

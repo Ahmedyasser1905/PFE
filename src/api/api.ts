@@ -41,41 +41,76 @@ import {
 } from './mappers';
 import { authService } from '~/services/authService';
 import { logger } from '~/utils/errorHandler';
-import { API_URLS, APP_CONFIG, STORAGE_KEYS } from '~/constants/config';
+import { APP_CONFIG, STORAGE_KEYS } from '~/constants/config';
 import { storage } from '~/utils/storage';
+import { detectBaseUrl } from '~/utils/network';
+import { showGlobalFeedback } from '~/context/FeedbackContext';
+import { Import } from 'lucide-react-native';
 
 // Re-export authApi from its new location to maintain compatibility
 export { authApi } from './authApi';
 
 // ─── Base URL Resolution ──────────────────────────────────────────────────────
+// Delegated to the shared network utility, which handles:
+//   - custom server URL override (settings screen)
+//   - production env URL (short-circuit)
+//   - parallel probing of LAN candidates in development
+//   - persistent caching of the winning URL
+const getBaseUrl = (): Promise<string> => detectBaseUrl();
 
-let resolvedBaseUrl: string | null = null;
-let baseUrlPromise: Promise<string> | null = null;
+// ─── FormData uploads via fetch (axios fails in RN bridgeless mode) ──────────
+// React Native's New Architecture (always-on in Expo Go) breaks axios's XHR
+// FormData uploads when the body contains a file:// URI — the request hangs
+// and surfaces as a generic "Network Error". The native fetch API handles
+// this case correctly, so we route FormData POST/PUT through fetch and keep
+// the same response-envelope unwrapping the axios interceptor uses.
+export async function uploadFormData<T = unknown>(
+    method: 'POST' | 'PUT' | 'PATCH',
+    url: string,
+    formData: FormData,
+): Promise<T> {
+    const baseUrl = await getBaseUrl();
+    const fullUrl = `${baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
+    const token = await authService.getValidToken();
 
-const getBaseUrl = (): Promise<string> => {
-    if (resolvedBaseUrl) return Promise.resolve(resolvedBaseUrl);
-    if (baseUrlPromise) return baseUrlPromise;
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    // IMPORTANT: never set Content-Type manually — fetch adds the correct
+    // multipart/form-data boundary automatically.
 
-    baseUrlPromise = (async () => {
-        // 1. Check for user-saved custom URL (from settings screen)
-        try {
-            const customUrl = await storage.getItem(STORAGE_KEYS.CUSTOM_SERVER_URL);
-            if (customUrl) {
-                resolvedBaseUrl = customUrl;
-                return customUrl;
-            }
-        } catch {}
+    if (__DEV__) console.log(`[API] [${method}] (fetch) → ${fullUrl}`);
 
-        // 2. React Native Environment Resolution
-        const url = __DEV__ ? API_URLS.DEVELOPMENT : API_URLS.PRODUCTION;
+    const res = await fetch(fullUrl, { method, headers, body: formData as any });
 
-        console.log(`[API] Resolved baseURL (__DEV__=${__DEV__}):`, url);
-        resolvedBaseUrl = url;
-        return url;
-    })();
+    // Read once, parse defensively.
+    const text = await res.text();
+    let parsed: any = null;
+    try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
 
-    return baseUrlPromise;
-};
+    if (!res.ok) {
+        const errMsg =
+            parsed?.error?.message ||
+            parsed?.message ||
+            `Request failed with status ${res.status}`;
+        if (__DEV__) {
+            logger.error('API', `FAILURE [${method}] ${url} | Status: ${res.status}`);
+        }
+        throw {
+            status: res.status,
+            message: errMsg,
+            code: parsed?.error?.code,
+            data: parsed,
+            isServerError: res.status >= 500,
+            isSubscriptionError:
+                res.status === 403 || parsed?.error?.code === 'NO_SUBSCRIPTION',
+        };
+    }
+
+    // Mirror the axios response interceptor's envelope unwrapping
+    if (parsed && parsed.status === 'ok' && 'data' in parsed) return parsed.data as T;
+    if (parsed && parsed.success === true && 'data' in parsed) return parsed.data as T;
+    return parsed as T;
+}
 
 
 
@@ -84,7 +119,6 @@ const getBaseUrl = (): Promise<string> => {
 const api = axios.create({
     timeout: APP_CONFIG.API_TIMEOUT_MS,
     headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
 });
@@ -136,6 +170,31 @@ api.interceptors.request.use(async (config) => {
                 delete config.headers.Authorization;
             }
         }
+    }
+    
+    // 3. Handle Content-Type
+    const isFormData = config.data instanceof FormData || (config.data && typeof config.data.append === 'function');
+    
+    if (isFormData) {
+        // For FormData, we MUST NOT set Content-Type manually so Axios/Browser can add the boundary.
+        if (config.headers && typeof config.headers.delete === 'function') {
+            config.headers.delete('Content-Type');
+        } else if (config.headers) {
+            delete (config.headers as any)['Content-Type'];
+            delete (config.headers as any)['content-type'];
+        }
+    } else if (config.data && !config.headers?.['Content-Type'] && !config.headers?.['content-type']) {
+        // For JSON requests, add the header if data is present
+        if (config.headers && typeof config.headers.set === 'function') {
+            config.headers.set('Content-Type', 'application/json');
+        } else if (config.headers) {
+            (config.headers as any)['Content-Type'] = 'application/json';
+        }
+    }
+    
+    if (__DEV__) {
+        console.log(`[API] Headers:`, JSON.stringify(config.headers));
+        console.log(`[API] Data type:`, config.data instanceof FormData ? 'FormData' : typeof config.data);
     }
     
     console.log(`[API] [${config.method?.toUpperCase()}] → ${config.baseURL}${config.url}`);
@@ -263,6 +322,53 @@ api.interceptors.response.use(
             isSubscriptionError: isSubscriptionError ?? false,
         };
 
+        // ─── Global Smart Feedback Injection ───
+        if (isSubscriptionError) {
+            showGlobalFeedback({
+                title: 'Subscription Required',
+                message: errorMessage || 'This feature is only available for premium subscribers.',
+                type: 'subscription',
+                primaryText: 'View Plans'
+            });
+        } else if (status === 'Network Error') {
+            showGlobalFeedback({
+                title: 'Connection Issue',
+                message: 'Please check your internet connection and try again.',
+                type: 'network',
+                primaryText: 'Retry'
+            });
+        } else if (status === 401) {
+            // Refresh flow handled most cases, but if we are here, it failed definitively
+            showGlobalFeedback({
+                title: 'Session Expired',
+                message: 'Your session has ended. Please log in again.',
+                type: 'error',
+                primaryText: 'Login'
+            });
+        } else if (status === 400) {
+            showGlobalFeedback({
+                title: 'Invalid Request',
+                message: errorMessage || 'Please check your input and try again.',
+                type: 'warning',
+                primaryText: 'OK'
+            });
+        } else if (status >= 500) {
+            showGlobalFeedback({
+                title: 'Server Error',
+                message: 'Something went wrong on our end. We are looking into it.',
+                type: 'error',
+                primaryText: 'OK'
+            });
+        } else {
+            // Fallback for other errors (403 forbidden, etc)
+            showGlobalFeedback({
+                title: 'Action Failed',
+                message: errorMessage || `An error occurred (Status: ${status})`,
+                type: 'error',
+                primaryText: 'OK'
+            });
+        }
+
         return Promise.reject(apiError);
     }
 );
@@ -340,7 +446,9 @@ getProject: async (id: string): Promise<Project> => {
 createProject: async (data: CreateProjectRequest | FormData): Promise<Project> => {
     let raw: RawProject;
     if (data instanceof FormData) {
-        raw = await api.post('/projects', data);
+        // Use fetch (not axios) — axios's XHR layer hangs on file:// URIs
+        // when RN's New Architecture / Bridgeless mode is enabled.
+        raw = await uploadFormData<RawProject>('POST', '/projects', data);
     } else {
         raw = await api.post('/projects', data);
     }

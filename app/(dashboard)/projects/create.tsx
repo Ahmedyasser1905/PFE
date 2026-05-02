@@ -8,15 +8,18 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Camera, ArrowLeft } from 'lucide-react-native';
+import { theme } from '~/constants/theme';
 import { estimationApi } from '~/api/api';
 import { BUDGET_OPTIONS } from '~/constants/config';
 import { useSubscriptionContext } from '~/context/SubscriptionContext';
 import { NativeSelect } from '~/components/ui/NativeSelect';
-import { AppFeedback } from '~/components/ui/AppFeedback';
+import { useFeedback } from '~/context/FeedbackContext';
 
 interface Budget {
   id: string;
@@ -38,6 +41,7 @@ const budgets: Budget[] = [...BUDGET_OPTIONS];
 export default function CreateProject() {
   const router = useRouter();
   const { canCreateProject } = useSubscriptionContext();
+  const { showSuccess, showError, showWarning, showSubscription } = useFeedback();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -47,14 +51,6 @@ export default function CreateProject() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(budgets[1]);
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const [feedback, setFeedback] = useState<any>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-  });
 
   // 📸 IMAGE PICKER
   const pickImage = async () => {
@@ -62,17 +58,12 @@ export default function CreateProject() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== 'granted') {
-        setFeedback({
-          visible: true,
-          type: 'error',
-          title: 'Permission Denied',
-          message: 'Gallery permission is required.',
-        });
+        showError('Permission Denied', 'Gallery permission is required.');
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -82,124 +73,28 @@ export default function CreateProject() {
         console.log('[IMAGE PICKER] Image selected:', result.assets[0].uri);
         setImage(result.assets[0].uri);
         setUploadedImageUrl(null);
-        await uploadImageToServer(result.assets[0].uri);
       }
     } catch (error) {
       console.log('[IMAGE PICKER] Error:', error);
-      setFeedback({
-        visible: true,
-        type: 'error',
-        title: 'Image Error',
-        message: 'Failed to pick image',
-      });
-    }
-  };
-
-  // 🖼️ UPLOAD IMAGE TO SERVER
-  const uploadImageToServer = async (imageUri: string) => {
-    try {
-      setUploadingImage(true);
-      console.log('[IMAGE UPLOAD] Starting upload:', imageUri);
-
-      const formData = new FormData();
-      const filename = imageUri.split('/').pop() || `project-${Date.now()}.jpg`;
-      const match = /\.(\w+)$/.exec(filename);
-      const mimeType = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
-
-      formData.append('image', {
-        uri: imageUri,
-        name: filename,
-        type: mimeType,
-      } as any);
-
-      console.log('[IMAGE UPLOAD] Sending to server:', { filename, mimeType });
-
-      // Use the correct API method
-      const uploadResponse = await estimationApi.uploadProjectImage(formData);
-
-      console.log('[IMAGE UPLOAD] Response:', uploadResponse);
-
-      if (uploadResponse?.imageUrl || uploadResponse?.url || uploadResponse?.image) {
-        const imageUrl = uploadResponse.imageUrl || uploadResponse.url || uploadResponse.image;
-        setUploadedImageUrl(imageUrl);
-        console.log('[IMAGE UPLOAD] Success:', imageUrl);
-
-        setFeedback({
-          visible: true,
-          type: 'success',
-          title: 'Image Uploaded',
-          message: 'Project image uploaded successfully',
-          primaryText: 'OK',
-          onPrimary: () => setFeedback({ visible: false }),
-        });
-      } else {
-        console.log('[IMAGE UPLOAD] No URL in response, using local URI');
-        setUploadedImageUrl(imageUri);
-        setFeedback({
-          visible: true,
-          type: 'success',
-          title: 'Image Ready',
-          message: 'Image selected and ready to upload with project',
-          primaryText: 'OK',
-          onPrimary: () => setFeedback({ visible: false }),
-        });
-      }
-    } catch (error: any) {
-      console.log('[IMAGE UPLOAD] Error:', error);
-      // Don't block project creation if image upload fails
-      setUploadedImageUrl(imageUri);
-      setFeedback({
-        visible: true,
-        type: 'warning',
-        title: 'Image Upload Info',
-        message: 'Image will be uploaded with project. You can continue.',
-        primaryText: 'OK',
-        onPrimary: () => setFeedback({ visible: false }),
-      });
-    } finally {
-      setUploadingImage(false);
+      showError('Image Error', 'Failed to pick image');
     }
   };
 
   // 🚀 CREATE PROJECT
   const handleCreate = async () => {
     if (!name.trim()) {
-      setFeedback({
-        visible: true,
-        type: 'error',
-        title: 'Missing Field',
-        message: 'Project name is required',
-        primaryText: 'OK',
-        onPrimary: () => setFeedback({ visible: false }),
-      });
+      showError('Missing Field', 'Project name is required');
       return;
     }
 
     if (!type) {
-      setFeedback({
-        visible: true,
-        type: 'error',
-        title: 'Missing Field',
-        message: 'Select a project type',
-        primaryText: 'OK',
-        onPrimary: () => setFeedback({ visible: false }),
-      });
+      showError('Missing Field', 'Select a project type');
       return;
     }
 
     if (!canCreateProject) {
-      setFeedback({
-        visible: true,
-        type: 'warning',
-        title: 'Limit Reached',
-        message: 'You reached your current plan limit.',
-        primaryText: 'Check Subscription',
-        secondaryText: 'Later',
-        onPrimary: () => {
-          setFeedback({ visible: false });
-          router.push('/(dashboard)/settings/subscription');
-        },
-        onSecondary: () => setFeedback({ visible: false }),
+      showSubscription('You reached your current plan limit.', () => {
+        router.push('/(dashboard)/settings/subscription');
       });
       return;
     }
@@ -218,74 +113,64 @@ export default function CreateProject() {
       const budgetType = selectedBudget?.id || 'MEDIUM';
 
       console.log('[CREATE PROJECT] Sending payload');
-      console.log('[CREATE PROJECT] Image URL:', uploadedImageUrl || image);
 
-      let payload: any = {
-        name: name.trim(),
-        description: combinedDescription,
-        budget_type: budgetType,
-      };
+      let response;
 
-      // Include image if available (either uploaded URL or local URI)
-      if (uploadedImageUrl || image) {
-        payload.image = uploadedImageUrl || image;
+      const isLocalImage = image && (image.startsWith('file://') || image.startsWith('content://') || image.startsWith('ph://') || !image.startsWith('http'));
+
+      if (isLocalImage && !uploadedImageUrl?.startsWith('http')) {
+        const formData = new FormData();
+        formData.append('name', name.trim());
+        formData.append('description', combinedDescription);
+        formData.append('budget_type', budgetType);
+
+        const uri = image as string;
+        const filename = uri.split('/').pop() || `project-${Date.now()}.jpg`;
+        const match = /\.(\w+)$/.exec(filename);
+        const mimeType = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : 'image/jpeg';
+
+        formData.append('image', {
+          uri: uri,
+          name: filename,
+          type: mimeType,
+        } as any);
+
+        response = await estimationApi.createProject(formData);
+      } else {
+        const payload: any = {
+          name: name.trim(),
+          description: combinedDescription,
+          budget_type: budgetType,
+        };
+
+        if (uploadedImageUrl?.startsWith('http')) {
+          payload.image_url = uploadedImageUrl;
+        }
+
+        response = await estimationApi.createProject(payload);
       }
 
-      console.log('[CREATE PROJECT] Payload:', payload);
-
-      const response = await estimationApi.createProject(payload);
-
-      console.log('[CREATE PROJECT] Response:', response);
-
-      setFeedback({
-        visible: true,
-        type: 'success',
-        title: 'Project Created',
-        message: 'Your project has been created successfully.',
-        primaryText: 'Go to Projects',
-        onPrimary: () => {
-          setFeedback({ visible: false });
-          console.log('[NAVIGATION] Redirecting to /(dashboard)/projects');
-          router.replace('/(dashboard)/projects');
-        },
-      });
+      showSuccess('Project Created', 'Your project has been created successfully.');
+      router.replace('/(dashboard)/projects');
 
     } catch (error: any) {
       console.log('[CREATE PROJECT] Error:', error);
-
-      setFeedback({
-        visible: true,
-        type: 'error',
-        title: 'Creation Failed',
-        message: error?.message || 'Something went wrong',
-        primaryText: 'OK',
-        onPrimary: () => setFeedback({ visible: false }),
-      });
+      // Errors are already handled globally by the API interceptor, 
+      // but we can add specific handling here if needed.
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <ArrowLeft size={24} />
-        </Pressable>
-        <Text style={styles.title}>New Project</Text>
-      </View>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
 
       <Pressable
-        style={[styles.imagePicker, uploadingImage && styles.imagePickerDisabled]}
+        style={styles.imagePicker}
         onPress={pickImage}
-        disabled={uploadingImage}
+        disabled={loading}
       >
-        {uploadingImage ? (
-          <View style={styles.uploadingOverlay}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.uploadingText}>Uploading image...</Text>
-          </View>
-        ) : image ? (
+        {image ? (
           <>
             <Image
               source={{ uri: image }}
@@ -303,7 +188,7 @@ export default function CreateProject() {
           </>
         ) : (
           <View style={styles.placeholder}>
-            <Camera size={32} color="#94a3b8" />
+            <Camera size={32} color={theme.colors.textMuted} />
             <Text style={styles.placeholderText}>Add Image</Text>
           </View>
         )}
@@ -313,10 +198,10 @@ export default function CreateProject() {
         <TextInput
           style={styles.input}
           placeholder="Project Name"
-          placeholderTextColor="#cbd5e1"
+          placeholderTextColor={theme.colors.textMuted}
           value={name}
           onChangeText={setName}
-          editable={!loading && !uploadingImage}
+          editable={!loading}
         />
 
         <NativeSelect
@@ -331,10 +216,10 @@ export default function CreateProject() {
         <TextInput
           style={styles.input}
           placeholder="Location"
-          placeholderTextColor="#cbd5e1"
+          placeholderTextColor={theme.colors.textMuted}
           value={location}
           onChangeText={setLocation}
-          editable={!loading && !uploadingImage}
+          editable={!loading}
         />
 
         <NativeSelect
@@ -347,31 +232,27 @@ export default function CreateProject() {
         />
 
         <TextInput
-          style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+          style={styles.descriptionInput}
           placeholder="Description"
-          placeholderTextColor="#cbd5e1"
+          placeholderTextColor={theme.colors.textMuted}
           value={description}
           onChangeText={setDescription}
           multiline
-          editable={!loading && !uploadingImage}
+          editable={!loading}
         />
 
         <Pressable
-          style={[styles.button, (loading || uploadingImage) && styles.buttonDisabled]}
+          style={[styles.button, (loading) && styles.buttonDisabled]}
           onPress={handleCreate}
-          disabled={loading || uploadingImage}
+          disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.white} />
           ) : (
-            <Text style={styles.btnText}>
-              {uploadingImage ? 'Uploading...' : 'Create Project'}
-            </Text>
+            <Text style={styles.btnText}>Create Project</Text>
           )}
         </Pressable>
       </View>
-
-      <AppFeedback {...feedback} />
     </ScrollView>
   );
 }
@@ -379,112 +260,88 @@ export default function CreateProject() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-
-  header: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 16,
-    alignItems: 'center',
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-
+    backgroundColor: theme.colors.background,
+  } as ViewStyle,
+  scrollContent: {
+    paddingBottom: 40,
+  } as ViewStyle,
   imagePicker: {
-    height: 180,
-    margin: 16,
-    borderRadius: 20,
+    height: 200,
+    margin: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.surfaceSecondary,
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
-
-  imagePickerDisabled: {
-    opacity: 0.6,
-  },
-
+    backgroundColor: theme.colors.surface,
+  } as ViewStyle,
   image: {
     width: '100%',
     height: '100%',
-  },
-
-  uploadingOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  },
-
-  uploadingText: {
-    color: '#64748b',
-    fontWeight: '600',
-    marginTop: 10,
-  },
-
+  } as any, // Image style
   uploadedBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#10b981',
+    top: 12,
+    right: 12,
+    backgroundColor: theme.colors.success,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
-  },
-
+    borderRadius: theme.roundness.full,
+    ...theme.shadows.sm,
+  } as ViewStyle,
   uploadedBadgeText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontWeight: '700',
     fontSize: 12,
-  },
-
+  } as TextStyle,
   placeholder: {
     alignItems: 'center',
-    gap: 8,
-  },
-
+    gap: theme.spacing.sm,
+  } as ViewStyle,
   placeholderText: {
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textMuted,
+  } as TextStyle,
   form: {
-    padding: 16,
-  },
-
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  } as ViewStyle,
   input: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 14,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.roundness.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    color: '#0f172a',
-  },
-
+    borderColor: theme.colors.border,
+    color: theme.colors.text,
+    ...theme.typography.body,
+  } as TextStyle,
   button: {
-    backgroundColor: '#2563eb',
-    padding: 16,
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
     alignItems: 'center',
-    marginTop: 10,
-  },
-
+    marginTop: theme.spacing.md,
+    ...theme.shadows.md,
+  } as ViewStyle,
   buttonDisabled: {
-    opacity: 0.5,
-  },
-
+    opacity: 0.6,
+  } as ViewStyle,
   btnText: {
-    color: '#fff',
+    color: theme.colors.white,
+    ...theme.typography.h4,
     fontWeight: '700',
-    fontSize: 16,
-  },
+  } as TextStyle,
+  descriptionInput: {
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.roundness.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.text,
+    ...theme.typography.body,
+    height: 100, 
+    textAlignVertical: 'top'
+  } as TextStyle,
 });

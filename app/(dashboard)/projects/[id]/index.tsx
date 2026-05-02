@@ -21,6 +21,10 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import {
@@ -47,6 +51,7 @@ import { estimationApi } from '~/api/api';
 import { ErrorScreen } from '~/components/ui/ErrorScreen';
 import { EmptyState } from '~/components/ui/EmptyState';
 import { useFeedback } from '~/context/FeedbackContext';
+import { resolveImageUrl, FALLBACK_IMAGE } from '~/utils/imageResolver';
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
 const getCategoryIcon = (name: string) => {
@@ -90,7 +95,7 @@ export default function ProjectDetailScreen() {
     onRefresh
   } = useProjectDetail(id as string, localCalculations);
 
-  const { showFeedback } = useFeedback();
+  const { showInfo, showSuccess, showWarning } = useFeedback();
 
   useFocusEffect(
     useCallback(() => {
@@ -101,42 +106,35 @@ export default function ProjectDetailScreen() {
   // ─── Export PDF handler ──────────────────────────────────────────────────────
   const handleExportPDF = useCallback(async () => {
     if (!id) return;
-    showFeedback({
-      title: 'Export Report',
-      message: 'Generate and send a PDF report for this project?',
-      type: 'info',
+    showInfo('Export Report', 'Generate and send a PDF report for this project?', {
       primaryText: 'Export',
-      secondaryText: 'Cancel',
       onPrimary: async () => {
         try {
           const result = await estimationApi.exportProject(id);
-          showFeedback({ title: 'Success', message: result?.message || 'PDF report has been sent to your email.', type: 'success' });
+          showSuccess('Success', result?.message || 'PDF report has been sent to your email.');
         } catch (err: any) {
-          showFeedback({ title: 'Export Failed', message: JSON.stringify(err?.response?.data || err?.message || 'Could not generate report. Make sure the project has saved calculations.'), type: 'error' });
+          // Error already handled by API interceptor, but we can override or add context if needed
         }
       },
     });
-  }, [id, showFeedback]);
+  }, [id, showInfo, showSuccess]);
 
   // ─── Delete leaf handler ────────────────────────────────────────────────────
   const handleDeleteLeaf = useCallback((projectDetailsId: string, categoryName: string) => {
     if (isCompleted) return;
-    showFeedback({
-      title: 'Delete Calculation',
-      message: `Remove the "${categoryName}" calculation from this project?`,
-      type: 'warning',
+    showWarning('Delete Calculation', `Remove the "${categoryName}" calculation from this project?`, {
       primaryText: 'Delete',
-      secondaryText: 'Cancel',
       onPrimary: async () => {
         try {
           await estimationApi.deleteLeaf(projectDetailsId);
           fetchData(); // Refresh to reflect changes
+          showSuccess('Deleted', 'Calculation removed successfully.');
         } catch (err: any) {
-          showFeedback({ title: 'Error', message: JSON.stringify(err?.response?.data || err?.message || 'Failed to delete calculation.'), type: 'error' });
+          // Error already handled by API interceptor
         }
       },
     });
-  }, [isCompleted, fetchData, showFeedback]);
+  }, [isCompleted, fetchData, showWarning, showSuccess]);
 
   // ─── Loading state ─────────────────────────────────────────────────────────
   if (loading && !refreshing) {
@@ -165,7 +163,7 @@ export default function ProjectDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -176,21 +174,36 @@ export default function ProjectDetailScreen() {
         }
       >
         <View style={styles.content}>
-
-          {/* ── Title + Status ── */}
-          <Text style={styles.title}>{project.name}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>📋 {projectIdShort}</Text>
-            <Text style={styles.metaDot}>•</Text>
-            <Text style={[styles.metaText, isCompleted && styles.metaCompleted]}>
-              {isCompleted ? 'COMPLETED' : 'ACTIVE'}
-            </Text>
+          {/* ── Title Section ── */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>{project.name}</Text>
+            <View style={styles.metaRow}>
+              <View style={[styles.statusBadge, isCompleted ? styles.statusCompleted : styles.statusActive]}>
+                <Text style={styles.statusText}>{isCompleted ? 'COMPLETED' : 'ACTIVE'}</Text>
+              </View>
+              <Text style={styles.metaText}>📋 {projectIdShort}</Text>
+            </View>
           </View>
+
+          {/* ── Project Image ── */}
+          {project.imageUrl && (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: resolveImageUrl(project.imageUrl) }}
+                style={styles.heroImage}
+                resizeMode="cover"
+                defaultSource={{ uri: FALLBACK_IMAGE }}
+                onError={() => {
+                  if (__DEV__) console.log('[ProjectDetail] image load failed for', project.projectId, project.imageUrl);
+                }}
+              />
+            </View>
+          )}
 
           {/* ── Lock Banner (read-only guard) ── */}
           {isCompleted && (
             <View style={styles.lockBanner}>
-              <Lock size={16} color="#B91C1C" />
+              <Lock size={16} color={theme.colors.error} />
               <Text style={styles.lockBannerText}>
                 This project is completed and locked — no modifications allowed.
               </Text>
@@ -200,7 +213,7 @@ export default function ProjectDetailScreen() {
           {/* ── Budget Card ── */}
           <View style={styles.budgetCard}>
             <View style={styles.budgetHeader}>
-              <TrendingUp size={18} color="#10B981" />
+              <TrendingUp size={18} color="rgba(255, 255, 255, 0.8)" />
               <Text style={styles.budgetTitle}>BUDGET OVERVIEW</Text>
             </View>
             <View style={styles.budgetContent}>
@@ -209,7 +222,7 @@ export default function ProjectDetailScreen() {
                 <Text style={styles.budgetSubText}>Cumulative Project Cost</Text>
               </View>
               <View style={styles.budgetIconCircle}>
-                <DollarSign size={24} color="#059669" />
+                <DollarSign size={24} color={theme.colors.primary} />
               </View>
             </View>
           </View>
@@ -273,7 +286,7 @@ export default function ProjectDetailScreen() {
           )}
 
           {/* ── Saved Calculations (Category Groups) ── */}
-          <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+          <View style={styles.sectionHeaderHistory}>
             <Text style={styles.sectionTitle}>Saved Calculations</Text>
           </View>
 
@@ -344,7 +357,7 @@ export default function ProjectDetailScreen() {
 
           {/* ── Export PDF Button ── */}
           <TouchableOpacity
-            style={[styles.exportBtn]}
+            style={styles.exportBtn}
             onPress={handleExportPDF}
             activeOpacity={0.8}
           >
@@ -353,7 +366,7 @@ export default function ProjectDetailScreen() {
           </TouchableOpacity>
 
           <Pressable
-            style={[styles.viewAllBtn, { marginTop: 8, backgroundColor: '#EFF6FF', borderWidth: 0 }]}
+            style={styles.detailedHistoryBtn}
             onPress={() =>
               router.push({
                 pathname: '/(dashboard)/estimation-history/',
@@ -361,7 +374,7 @@ export default function ProjectDetailScreen() {
               })
             }
           >
-            <Text style={[styles.viewAllText, { color: theme.colors.primary, fontWeight: '700' }]}>
+            <Text style={styles.detailedHistoryText}>
               View Detailed Estimation History →
             </Text>
           </Pressable>
@@ -369,7 +382,7 @@ export default function ProjectDetailScreen() {
           {/* ── Recent Activity (ACTIVE only) ── */}
           {!isCompleted && recentCalculations.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 12 }]}>
+              <Text style={styles.sectionTitleRecent}>
                 Recent Activity
               </Text>
               {recentCalculations.map((calc, idx) => (
@@ -413,166 +426,349 @@ export default function ProjectDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, color: theme.colors.textSecondary, fontWeight: '500' },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  } as ViewStyle,
+  center: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  } as ViewStyle,
+  loadingText: { 
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+  } as TextStyle,
 
-  content: { padding: 20 },
-  title: { fontSize: 28, fontWeight: '800', color: '#0F172A', marginBottom: 8, letterSpacing: -0.5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  metaText: { color: '#64748B', fontSize: 13, fontWeight: '500' },
-  metaDot: { color: '#CBD5E1' },
-  metaCompleted: { color: '#10B981', fontWeight: '700' },
+  content: { padding: theme.spacing.lg } as ViewStyle,
+  titleSection: {
+    marginBottom: theme.spacing.lg,
+  } as ViewStyle,
+  title: { 
+    ...theme.typography.h1,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  } as TextStyle,
+  metaRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.sm,
+  } as ViewStyle,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.roundness.sm,
+  } as ViewStyle,
+  statusActive: {
+    backgroundColor: theme.colors.infoLight,
+  } as ViewStyle,
+  statusCompleted: {
+    backgroundColor: theme.colors.successLight,
+  } as ViewStyle,
+  statusText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  } as TextStyle,
+  metaText: { 
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  } as TextStyle,
 
   lockBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    padding: 14,
-    borderRadius: 12,
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.errorLight,
+    padding: theme.spacing.md,
+    borderRadius: theme.roundness.lg,
     borderWidth: 1,
     borderColor: '#FEE2E2',
-    marginBottom: 20,
-  },
-  lockBannerText: { color: '#991B1B', fontSize: 13, fontWeight: '600', flex: 1 },
+    marginBottom: theme.spacing.lg,
+  } as ViewStyle,
+  lockBannerText: { 
+    color: theme.colors.error,
+    ...theme.typography.small,
+    fontWeight: '600',
+    flex: 1,
+  } as TextStyle,
 
   budgetCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginTop: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  budgetHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  budgetTitle: { fontSize: 12, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
-  budgetContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  budgetMainValue: { fontSize: 28, fontWeight: '900', color: '#1E293B' },
-  budgetSubText: { fontSize: 13, color: '#94A3B8', marginTop: 2, fontWeight: '500' },
-  budgetIconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.roundness.xxl,
+    padding: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.xl,
+    ...theme.shadows.md,
+  } as ViewStyle,
+  budgetHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.sm, 
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
+  budgetTitle: { 
+    ...theme.typography.caption,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textTransform: 'uppercase',
+    fontWeight: '800',
+  } as TextStyle,
+  budgetContent: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+  } as ViewStyle,
+  budgetMainValue: { 
+    ...theme.typography.h1,
+    color: theme.colors.white,
+    fontSize: 28,
+  } as TextStyle,
+  budgetSubText: { 
+    ...theme.typography.small,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 2,
+  } as TextStyle,
+  budgetIconCircle: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: 24, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+  } as ViewStyle,
 
   overviewCard: {
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 16,
-    borderLeftWidth: 3,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.xl,
+    borderLeftWidth: 4,
     borderLeftColor: theme.colors.primary,
-  },
-  overviewLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, marginBottom: 8 },
-  overviewText: { color: '#334155', fontSize: 14, lineHeight: 22 },
+  } as ViewStyle,
+  overviewLabel: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    fontWeight: '800',
+    marginBottom: theme.spacing.sm,
+  } as TextStyle,
+  overviewText: { 
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+  } as TextStyle,
 
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  statsRow: { 
+    flexDirection: 'row', 
+    gap: theme.spacing.md, 
+    marginBottom: theme.spacing.xxl,
+  } as ViewStyle,
   statCard: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.roundness.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    elevation: 1,
-  },
-  statLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
-  statValue: { fontSize: 28, fontWeight: '800', color: '#0F172A', marginTop: 2 },
+    borderColor: theme.colors.divider,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  statLabel: { 
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  } as TextStyle,
+  statValue: { 
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginTop: 2,
+  } as TextStyle,
 
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  sectionHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
+  sectionTitle: { 
+    ...theme.typography.h3,
+    color: theme.colors.text,
+  } as TextStyle,
 
-  mainCategoriesRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  mainCategoriesRow: { 
+    flexDirection: 'row', 
+    gap: theme.spacing.md, 
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
   mainCatCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.md,
+    borderRadius: theme.roundness.xl,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.border,
     alignItems: 'center',
-    gap: 12,
-  },
-  mainCatIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  mainCatText: { fontSize: 13, fontWeight: '700', color: '#0F172A', textAlign: 'center' },
+    gap: theme.spacing.sm,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  mainCatIcon: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: theme.roundness.md, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+  } as ViewStyle,
+  mainCatText: { 
+    ...theme.typography.small,
+    fontWeight: '700', 
+    color: theme.colors.text,
+    textAlign: 'center',
+  } as TextStyle,
 
   categoryCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  categoryCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  categoryIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  categoryCalcCount: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
-  categoryTitle: { fontWeight: '700', fontSize: 17, color: '#0F172A', marginBottom: 4 },
-  categorySub: { color: '#64748B', fontSize: 13, marginBottom: 10 },
-  tagsRow: { flexDirection: 'row', gap: 8 },
-  tag: { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' },
-  tagText: { fontSize: 10, fontWeight: '800', color: '#475569', letterSpacing: 0.5 },
-
-  viewAllBtn: { marginTop: 12, alignItems: 'center', paddingVertical: 12 },
-  viewAllText: { color: theme.colors.primary, fontWeight: '700', fontSize: 14 },
-
-  actionBtn: {
-    backgroundColor: '#0F172A',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderColor: theme.colors.border,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  categoryCardTop: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: theme.spacing.sm,
+  } as ViewStyle,
+  categoryIcon: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: theme.roundness.md, 
+    alignItems: 'center', 
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 20,
-    gap: 10,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  actionBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  } as ViewStyle,
+  categoryCalcCount: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontWeight: '800',
+  } as TextStyle,
+  categoryTitle: { 
+    ...theme.typography.h4,
+    color: theme.colors.text,
+    marginBottom: 4,
+  } as TextStyle,
+  categorySub: { 
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+  } as TextStyle,
+  tagsRow: { 
+    flexDirection: 'row', 
+    gap: theme.spacing.sm,
+  } as ViewStyle,
+  tag: { 
+    backgroundColor: theme.colors.surface, 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: theme.roundness.sm, 
+    borderWidth: 1, 
+    borderColor: theme.colors.border,
+  } as ViewStyle,
+  tagText: { 
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: '800', 
+    color: theme.colors.textSecondary,
+  } as TextStyle,
+
+  viewAllBtn: { 
+    marginVertical: theme.spacing.md, 
+    alignItems: 'center', 
+    paddingVertical: theme.spacing.md,
+  } as ViewStyle,
+  viewAllText: { 
+    ...theme.typography.bodyBold,
+    color: theme.colors.primary, 
+  } as TextStyle,
 
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 12,
-    gap: 10,
-    backgroundColor: '#EFF6FF',
+    paddingVertical: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
+    borderColor: theme.colors.primary,
+  } as ViewStyle,
   exportBtnText: {
     color: theme.colors.primary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
+    ...theme.typography.bodyBold,
+  } as TextStyle,
   recentItemWrapper: {
     position: 'relative',
-  },
+    marginBottom: theme.spacing.sm,
+  } as ViewStyle,
   deleteLeafBtn: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    width: 36,
+    height: 36,
+    borderRadius: theme.roundness.sm,
+    backgroundColor: theme.colors.errorLight,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: theme.colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-  },
+  } as ViewStyle,
+  imageContainer: {
+    width: '100%',
+    height: 220,
+    borderRadius: theme.roundness.xxl,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.xl,
+    backgroundColor: theme.colors.surfaceSecondary,
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  scrollContent: { paddingBottom: 120 } as ViewStyle,
+  sectionHeaderHistory: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: theme.spacing.md,
+    marginTop: 20,
+  } as ViewStyle,
+  detailedHistoryBtn: {
+    marginVertical: theme.spacing.md, 
+    alignItems: 'center', 
+    paddingVertical: theme.spacing.md,
+    marginTop: 8, 
+    backgroundColor: '#EFF6FF', 
+    borderWidth: 0,
+    borderRadius: theme.roundness.lg,
+  } as ViewStyle,
+  detailedHistoryText: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.primary, 
+    fontWeight: '700',
+  } as TextStyle,
+  sectionTitleRecent: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
+    marginTop: 24, 
+    marginBottom: 12,
+  } as TextStyle,
 });

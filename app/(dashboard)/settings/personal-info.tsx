@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Mail } from 'lucide-react-native';
@@ -7,6 +7,119 @@ import { useRouter } from 'expo-router';
 import { theme } from '~/constants/theme';
 import { useUser } from '~/hooks/useUser';
 import { useLanguage } from '~/context/LanguageContext';
+import { resolveImageUrl } from '~/utils/imageResolver';
+
+const styles = StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.colors.background 
+  } as ViewStyle,
+
+  rtlRow: { flexDirection: 'row-reverse' } as ViewStyle,
+  rtlText: { textAlign: 'right' } as TextStyle,
+
+  scroll: { 
+    padding: theme.spacing.lg, 
+    paddingBottom: 60 
+  } as ViewStyle,
+
+  avatarSection: { 
+    alignItems: 'center', 
+    marginBottom: theme.spacing.xxl 
+  } as ViewStyle,
+  avatarWrapper: { 
+    position: 'relative', 
+    marginBottom: theme.spacing.sm 
+  } as ViewStyle,
+  avatarImage: {
+    width: 110, 
+    height: 110, 
+    borderRadius: 55,
+    borderWidth: 4, 
+    borderColor: theme.colors.primaryLight,
+    ...theme.shadows.md,
+  } as ImageStyle,
+  avatarPlaceholder: {
+    width: 110, 
+    height: 110, 
+    borderRadius: 55,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center', 
+    justifyContent: 'center',
+    borderWidth: 4, 
+    borderColor: theme.colors.primaryLight,
+    ...theme.shadows.md,
+  } as ViewStyle,
+  avatarInitials: { 
+    color: theme.colors.white, 
+    fontSize: 42, 
+    fontWeight: '800' 
+  } as TextStyle,
+  avatarHint: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted, 
+    fontWeight: '600' 
+  } as TextStyle,
+
+  section: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.roundness.xxl,
+    padding: theme.spacing.xl,
+    gap: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  sectionTitle: { 
+    ...theme.typography.caption,
+    fontWeight: '900', 
+    color: theme.colors.textSecondary, 
+    textTransform: 'uppercase', 
+    letterSpacing: 1 
+  } as TextStyle,
+
+  field: { gap: theme.spacing.xs } as ViewStyle,
+  fieldLabelRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.sm 
+  } as ViewStyle,
+  fieldLabel: { 
+    ...theme.typography.small,
+    fontWeight: '700', 
+    color: theme.colors.textSecondary 
+  } as TextStyle,
+
+  inputReadOnly: {
+    borderWidth: 1.5, 
+    borderColor: theme.colors.surface,
+    borderRadius: theme.roundness.md, 
+    paddingHorizontal: theme.spacing.lg, 
+    paddingVertical: 14,
+    backgroundColor: theme.colors.surface,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+  } as ViewStyle,
+  inputReadOnlyText: { 
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textSecondary, 
+    flex: 1 
+  } as TextStyle,
+  readOnlyBadge: {
+    backgroundColor: 'rgba(0,0,0,0.05)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: theme.roundness.sm,
+  } as ViewStyle,
+  readOnlyBadgeText: { 
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: '800', 
+    color: theme.colors.textMuted 
+  } as TextStyle,
+});
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
@@ -17,26 +130,21 @@ export default function PersonalInfoScreen() {
   const initials = (name || 'U').charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, isArabic && styles.rtlRow]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={22} color="#0F172A" style={{ transform: [{ scaleX: isArabic ? -1 : 1 }] }} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{t('settings.personal_info_title')}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
             {user?.avatarUrl ? (
-              <Image 
-                source={{ uri: user.avatarUrl }} 
-                style={styles.avatarImage} 
+              <Image
+                source={{ uri: resolveImageUrl(user.avatarUrl) }}
+                style={styles.avatarImage}
                 contentFit="cover"
                 transition={200}
+                onError={() => {
+                  if (__DEV__) console.log('[PersonalInfo] avatar load failed:', user.avatarUrl);
+                }}
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
@@ -58,7 +166,7 @@ export default function PersonalInfoScreen() {
               <Text style={styles.fieldLabel}>{t('settings.full_name')}</Text>
             </View>
             <View style={[styles.inputReadOnly, isArabic && styles.rtlRow]}>
-              <Text style={[styles.inputReadOnlyText, isArabic && { textAlign: 'right' }]}>
+              <Text style={[styles.inputReadOnlyText, isArabic && styles.rtlText]}>
                 {name || '—'}
               </Text>
               <View style={styles.readOnlyBadge}>
@@ -74,7 +182,7 @@ export default function PersonalInfoScreen() {
               <Text style={styles.fieldLabel}>{t('auth.email_label')}</Text>
             </View>
             <View style={[styles.inputReadOnly, isArabic && styles.rtlRow]}>
-              <Text style={[styles.inputReadOnlyText, isArabic && { textAlign: 'right' }]}>
+              <Text style={[styles.inputReadOnlyText, isArabic && styles.rtlText]}>
                 {email || '—'}
               </Text>
               <View style={styles.readOnlyBadge}>
@@ -85,72 +193,5 @@ export default function PersonalInfoScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
+    );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  rtlRow: { flexDirection: 'row-reverse' },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  rtlText: { textAlign: 'right' },
-
-  scroll: { padding: 20, paddingBottom: 60 },
-
-  avatarSection: { alignItems: 'center', marginBottom: 32 },
-  avatarWrapper: { position: 'relative', marginBottom: 10 },
-  avatarImage: {
-    width: 100, height: 100, borderRadius: 50,
-    borderWidth: 3, borderColor: '#2563EB',
-  },
-  avatarPlaceholder: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#2563EB',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: '#93C5FD',
-  },
-  avatarInitials: { color: '#fff', fontSize: 36, fontWeight: '800' },
-  avatarHint: { fontSize: 13, color: '#64748B', fontWeight: '500' },
-
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    gap: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 24,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.8 },
-
-  field: { gap: 8 },
-  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-
-  inputReadOnly: {
-    borderWidth: 1.5, borderColor: '#F1F5F9',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#F8FAFC',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  inputReadOnlyText: { fontSize: 15, color: '#94A3B8', fontWeight: '500', flex: 1 },
-  readOnlyBadge: {
-    backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-  },
-  readOnlyBadgeText: { fontSize: 10, fontWeight: '700', color: '#94A3B8' },
-});

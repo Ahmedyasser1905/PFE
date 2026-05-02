@@ -8,6 +8,8 @@ import {
     TouchableOpacity,
     StatusBar,
     Animated,
+    ViewStyle,
+    TextStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +17,67 @@ import { theme } from '~/constants/theme';
 import { OnboardingCard } from '~/components/features/auth/OnboardingCard';
 import { Building2, HardHat, ShieldCheck, ChevronRight, PieChart } from 'lucide-react-native';
 import { storage } from '~/utils/storage';
+
 const { width } = Dimensions.get('window');
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: theme.colors.primary,
+    } as ViewStyle,
+    skipButton: {
+        position: 'absolute',
+        top: 60,
+        right: 30,
+        zIndex: 10,
+    } as ViewStyle,
+    skipText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: 'white',
+        opacity: 0.8,
+    } as TextStyle,
+    iconContainer: {
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.xl,
+        paddingBottom: theme.spacing.xl,
+        height: 100,
+    } as ViewStyle,
+    pagination: {
+        flexDirection: 'row',
+        height: 64,
+        alignItems: 'center',
+    } as ViewStyle,
+    dot: {
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: 'white',
+        marginHorizontal: 4,
+    } as ViewStyle,
+    nextButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 5,
+    } as ViewStyle,
+});
+
 const SLIDES = [
     {
         id: '1',
@@ -145,61 +207,4 @@ export default function OnboardingScreen() {
         </View>
     );
 }
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.primary,
-    },
-    skipButton: {
-        position: 'absolute',
-        top: 60,
-        right: 30,
-        zIndex: 10,
-    },
-    skipText: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: 'white',
-        opacity: 0.8,
-    },
-    iconContainer: {
-        width: 240,
-        height: 240,
-        borderRadius: 120,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: theme.spacing.xl,
-        paddingBottom: theme.spacing.xl,
-        height: 100,
-    },
-    pagination: {
-        flexDirection: 'row',
-        height: 64,
-        alignItems: 'center',
-    },
-    dot: {
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: 'white',
-        marginHorizontal: 4,
-    },
-    nextButton: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'white',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-});
 

@@ -8,14 +8,18 @@
  *   1. If URL is falsy → return FALLBACK_IMAGE
  *   2. If URL starts with "http" → return as-is (already absolute)
  *   3. Otherwise → prepend BASE_URL (relative path from backend)
+ *
+ * The BASE_URL is sourced from the shared network utility, so images
+ * always use the SAME host that the API requests use — including any
+ * dynamically-detected dev IP.
  */
-import { API_URLS } from '~/constants/config';
+import { getCachedBaseUrl } from '~/utils/network';
 
 /**
  * High-quality construction fallback image.
  * Used when no image is provided or image fails to load.
  */
-export const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1503387762-592dee58c190?auto=format&fit=crop&w=600&q=80';
+export const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=600&auto=format&fit=crop';
 
 /**
  * Resolves a potentially relative image URL to an absolute URL.
@@ -24,10 +28,11 @@ export const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1503387762-592d
  * @returns A fully resolved image URL, or the FALLBACK_IMAGE if url is invalid
  */
 export function resolveImageUrl(url?: string | null): string {
-  // The BASE_URL for the backend server (without /api suffix)
-  // We strip /api if present since image paths are relative to the server root
-  const devUrl = API_URLS.DEVELOPMENT.replace(/\/api\/?$/, '');
-  const BASE_URL = __DEV__ ? devUrl : API_URLS.PRODUCTION.replace(/\/api\/?$/, '');
+  // The BASE_URL for the backend server (without /api suffix).
+  // We strip /api if present since image paths are relative to the server root.
+  // Pulled from the shared network utility so images and API calls always
+  // target the same host (works across networks once detection runs).
+  const BASE_URL = getCachedBaseUrl().replace(/\/api\/?$/, '');
 
   // 1. No URL provided → fallback
   if (!url || typeof url !== 'string' || url.trim() === '') {

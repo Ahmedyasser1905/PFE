@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lock, ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,61 @@ import { BaseInput } from '~/components/ui/BaseInput';
 import { BaseButton } from '~/components/ui/BaseButton';
 import { authApi } from '~/api/api';
 import { useFeedback } from '~/context/FeedbackContext';
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    } as ViewStyle,
+    keyboardView: {
+        flex: 1,
+    } as ViewStyle,
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: theme.spacing.xl,
+        paddingTop: theme.spacing.xl,
+        paddingBottom: theme.spacing.xl,
+    } as ViewStyle,
+    backButton: {
+        alignSelf: 'flex-start',
+        marginBottom: theme.spacing.xl,
+        paddingHorizontal: 0,
+    } as ViewStyle,
+    header: {
+        marginBottom: theme.spacing.xxl,
+    } as ViewStyle,
+    content: {
+        flex: 1,
+    } as ViewStyle,
+    successContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.xl,
+        textAlign: 'center',
+    } as ViewStyle,
+    title: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: theme.colors.text,
+        marginBottom: theme.spacing.sm,
+        marginTop: theme.spacing.lg,
+        letterSpacing: -1,
+        textAlign: 'center',
+    } as TextStyle,
+    subtitle: {
+        fontSize: 16,
+        color: theme.colors.textSecondary,
+        lineHeight: 24,
+        marginBottom: theme.spacing.xl,
+        textAlign: 'center',
+    } as TextStyle,
+    submitButton: {
+        marginTop: theme.spacing.lg,
+        width: '100%',
+    } as ViewStyle,
+});
+
 export default function ResetPasswordScreen() {
     const { email, token } = useLocalSearchParams<{ email: string; token: string }>();
     const [password, setPassword] = useState('');
@@ -74,7 +129,10 @@ export default function ResetPasswordScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <BaseButton
                         title="Back"
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (router.canGoBack()) router.back();
+                            else router.replace('/(auth)/login');
+                        }}
                         variant="ghost"
                         icon={ArrowLeft}
                         iconPosition="left"
@@ -116,57 +174,4 @@ export default function ResetPasswordScreen() {
         </SafeAreaView>
     );
 }
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    keyboardView: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: theme.spacing.xl,
-        paddingTop: theme.spacing.xl,
-        paddingBottom: theme.spacing.xl,
-    },
-    backButton: {
-        alignSelf: 'flex-start',
-        marginBottom: theme.spacing.xl,
-        paddingHorizontal: 0,
-    },
-    header: {
-        marginBottom: theme.spacing.xxl,
-    },
-    content: {
-        flex: 1,
-    },
-    successContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: theme.spacing.xl,
-        textAlign: 'center',
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: theme.colors.text,
-        marginBottom: theme.spacing.sm,
-        marginTop: theme.spacing.lg,
-        letterSpacing: -1,
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        lineHeight: 24,
-        marginBottom: theme.spacing.xl,
-        textAlign: 'center',
-    },
-    submitButton: {
-        marginTop: theme.spacing.lg,
-        width: '100%',
-    },
-});
 

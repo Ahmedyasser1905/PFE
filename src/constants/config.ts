@@ -16,7 +16,31 @@ export const STORAGE_KEYS = {
   ONBOARDING_COMPLETED: 'hasCompletedOnboarding_v6',
   CALCULATIONS: '@buildest_calculations',
   TRANSLATIONS: 'app_translations',
+  RESOLVED_API_URL: '@buildest_resolved_api_url',
 } as const;
+
+// ─── Dev-mode candidate hosts for auto-detection ──────────────────────────────
+// In development the app probes these in order and uses the first one that
+// answers. You can override the whole list via EXPO_PUBLIC_DEV_API_HOSTS
+// (comma-separated, e.g. "192.168.137.1,192.168.1.11").
+export const DEV_API_PORT = Number(process.env.EXPO_PUBLIC_DEV_API_PORT) || 5000;
+
+export const DEV_API_HOST_CANDIDATES: string[] = (() => {
+  const fromEnv = (process.env.EXPO_PUBLIC_DEV_API_HOSTS || '')
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  if (fromEnv.length > 0) return fromEnv;
+  return [
+    '192.168.137.1', // laptop Mobile-Hotspot gateway
+    '192.168.1.11',  // home Wi-Fi LAN
+    '192.168.1.1',
+    '192.168.0.1',
+    '10.0.2.2',      // Android emulator → host loopback
+    '127.0.0.1',     // iOS simulator
+    'localhost',
+  ];
+})();
 
 // ─── App Config ───────────────────────────────────────────────────────────────
 

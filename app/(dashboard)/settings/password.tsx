@@ -1,12 +1,55 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ShieldAlert } from 'lucide-react-native';
+import { ArrowLeft, Lock, ShieldCheck } from 'lucide-react-native';
 import { theme } from '~/constants/theme';
+import { BaseInput } from '~/components/ui/BaseInput';
+import { BaseButton } from '~/components/ui/BaseButton';
+import { usersApi } from '~/api/api';
 
 export default function ChangePassword() {
     const router = useRouter();
+    const [currentPass, setCurrentPass] = useState('');
+    const [newPass, setNewPass] = useState('');
+    const [confirmPass, setConfirmPass] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleChangePassword = async () => {
+        // Client-side validation
+        if (!currentPass) {
+            Alert.alert('Error', 'Current password is required');
+            return;
+        }
+        if (newPass.length < 6) {
+            Alert.alert('Error', 'New password must be at least 6 characters');
+            return;
+        }
+        if (newPass !== confirmPass) {
+            Alert.alert('Error', 'New passwords do not match');
+            return;
+        }
+        if (currentPass === newPass) {
+            Alert.alert('Error', 'New password must differ from current password');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await usersApi.changePassword({
+                currentPassword: currentPass,
+                newPassword: newPass,
+            });
+            Alert.alert('Success', 'Password updated successfully', [
+                { text: 'OK', onPress: () => router.back() },
+            ]);
+        } catch (error: any) {
+            const msg = error.response?.data?.message || error.message || 'Failed to change password';
+            Alert.alert('Error', msg);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -23,21 +66,46 @@ export default function ChangePassword() {
                 <Text style={styles.titleText}>Security</Text>
                 <View style={{ width: 80 }} />
             </View>
-            
-            <View style={styles.content}>
-                <View style={styles.iconCircle}>
-                    <ShieldAlert size={48} color={theme.colors.error} />
+            <ScrollView contentContainerStyle={styles.content}>
+                <View style={styles.iconHeader}>
+                    <View style={styles.iconCircle}>
+                        <ShieldCheck size={32} color={theme.colors.primary} />
+                    </View>
+                    <Text style={styles.infoTitle}>Change Password</Text>
+                    <Text style={styles.infoSubtitle}>Ensure your account stays secure with a strong password.</Text>
                 </View>
-                <Text style={styles.infoTitle}>Feature Unavailable</Text>
-                <Text style={styles.infoSubtitle}>
-                    Changing your password from the dashboard is currently not supported.
-                    Please log out and use the "Forgot Password" flow from the login screen.
-                </Text>
-            </View>
+                <BaseInput
+                    label="Current Password"
+                    secureTextEntry
+                    icon={Lock}
+                    value={currentPass}
+                    onChangeText={setCurrentPass}
+                />
+                <View style={styles.divider} />
+                <BaseInput
+                    label="New Password"
+                    secureTextEntry
+                    icon={Lock}
+                    value={newPass}
+                    onChangeText={setNewPass}
+                />
+                <BaseInput
+                    label="Confirm New Password"
+                    secureTextEntry
+                    icon={Lock}
+                    value={confirmPass}
+                    onChangeText={setConfirmPass}
+                />
+                <BaseButton
+                    title={loading ? "Updating..." : "Update Password"}
+                    onPress={handleChangePassword}
+                    style={[styles.btn, loading && { opacity: 0.7 }] as any}
+                    disabled={loading}
+                />
+            </ScrollView>
         </SafeAreaView>
     );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white' },
     header: {
@@ -62,7 +130,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: theme.colors.border + '50', 
+        backgroundColor: theme.colors.border + '50',
     },
     backBtnIconBox: {
         justifyContent: 'center',
@@ -76,23 +144,21 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginRight: -20,
     },
-    content: { 
-        flex: 1,
-        padding: theme.spacing.xl,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+    content: { padding: theme.spacing.xl },
+    iconHeader: { alignItems: 'center', marginBottom: 32 },
     iconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#fef2f2',
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#eff6ff',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
     },
-    infoTitle: { fontSize: 24, fontWeight: '800', color: theme.colors.text, marginBottom: 12 },
-    infoSubtitle: { fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 24 },
+    infoTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
+    infoSubtitle: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginTop: 8 },
+    divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 12 },
+    btn: { marginTop: 24 }
 });
 
 

@@ -89,6 +89,10 @@ export interface CalculateRequest {
   selected_formula_id: string;
   selected_config_id: string | null;
   field_values: Record<string, number>;
+  project_name?: string;
+  category_name?: string;
+  project_id?: string;
+  email?: string;
 }
 
 export interface RawMaterialLine {

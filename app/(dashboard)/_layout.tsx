@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, ViewStyle } from 'react-native';
 import { Stack } from 'expo-router';
 import Header from '~/components/common/Header';
 import BottomNav from '~/components/common/BottomNav';
@@ -10,7 +10,7 @@ export default function DashboardLayout() {
   return (
     <View style={styles.container}>
       <Header />
-      
+
       <View style={styles.content}>
         <Stack
           screenOptions={{
@@ -30,7 +30,7 @@ export default function DashboardLayout() {
           <Stack.Screen name="settings" />
         </Stack>
       </View>
-      
+
       <BottomNav />
     </View>
   );
@@ -39,9 +39,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
+  } as ViewStyle,
   content: {
     flex: 1,
     paddingBottom: Platform.OS === 'ios' ? 90 : 70, // Matches BottomNav height
-  },
+  } as ViewStyle,
 });

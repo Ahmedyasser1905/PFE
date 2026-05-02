@@ -10,15 +10,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  StatusBar
+  StatusBar,
+  ViewStyle,
+  TextStyle
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Send, X, Trash2 } from 'lucide-react-native';
+import { Send, X, Trash2, Zap } from 'lucide-react-native';
 import { theme } from '~/constants/theme';
 import { chatApi } from '~/api/api';
 import { AIQuestion } from '~/api/types';
 import { useLanguage } from '~/context/LanguageContext';
+import { useSubscriptionContext } from '~/context/SubscriptionContext';
+import { useFeedback } from '~/context/FeedbackContext';
 
 type Message = {
   id: string;
@@ -29,6 +33,19 @@ type Message = {
 export default function ChatScreen() {
   const router = useRouter();
   const { language } = useLanguage();
+  const {
+    canUseAI,
+    remainingAIRequests,
+    usage,
+    isSubscriptionActive,
+    incrementAIUsage,
+    refresh: refreshSubscription,
+  } = useSubscriptionContext();
+  const { showFeedback } = useFeedback();
+  const aiLimit = usage?.aiUsageLimit.limit ?? 0;
+  const aiUsed = usage?.aiUsageLimit.used ?? 0;
+  const showCounter = aiLimit > 0; // hide the badge when unlimited or unresolved
+  const isLimitReached = !canUseAI && isSubscriptionActive;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -75,27 +92,56 @@ export default function ChatScreen() {
   const sendMessage = useCallback(async () => {
     const textToSend = inputText.trim();
     if (!textToSend || isLoading) return;
+
+    // Client-side limit gate — fail fast before hitting the server
+    if (!canUseAI) {
+      showFeedback({
+        title: isSubscriptionActive ? 'AI Limit Reached' : 'Subscription Required',
+        message: isSubscriptionActive
+          ? `You have used all ${aiLimit} AI requests for this billing cycle. Upgrade your plan or wait for the next renewal.`
+          : 'Activate a subscription to use the AI expert.',
+        type: 'subscription',
+        primaryText: 'View Plans',
+      });
+      return;
+    }
+
     const newUserMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend };
     setInputText('');
     setMessages(prev => [...prev, newUserMsg]);
     setIsLoading(true);
     try {
       const response = await chatApi.sendMessage(textToSend);
+      // Optimistically bump local AI usage so the counter updates immediately.
+      incrementAIUsage();
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response.message || "I'm sorry, I couldn't process that request.",
       }]);
-    } catch {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: "Sorry, I'm having trouble connecting to the expert brain right now. Please try again later."
-      }]);
+    } catch (err: any) {
+      // Server enforced the cap (LIMIT_REACHED / 403) — sync local usage from server
+      // and surface a precise message instead of the generic connection error.
+      const code = err?.code || err?.data?.error?.code;
+      const status = err?.status;
+      if (code === 'LIMIT_REACHED' || status === 403) {
+        refreshSubscription();
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `You've reached your AI request limit (${aiLimit}). Upgrade your plan to keep chatting.`,
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "Sorry, I'm having trouble connecting to the expert brain right now. Please try again later."
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [inputText, isLoading]);
+  }, [inputText, isLoading, canUseAI, isSubscriptionActive, aiLimit, incrementAIUsage, refreshSubscription, showFeedback]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
@@ -109,12 +155,11 @@ export default function ChatScreen() {
         <View style={[
           styles.messageBubble, 
           isUser ? styles.userBubble : styles.assistantBubble,
-          { shadowColor: isUser ? theme.colors.primary : '#000' }
         ]}>
           <Text style={[
             styles.messageText, 
             isUser ? styles.userText : styles.assistantText,
-            { textAlign: isArabic ? 'right' : 'left' }
+            isArabic ? styles.textRight : styles.textLeft
           ]}>
             {item.content}
           </Text>
@@ -124,20 +169,8 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          
-          
-          <Text style={styles.headerTitle}>AI Construction Expert</Text>
-          
-          <TouchableOpacity onPress={clearChat} style={styles.headerIconBtn}>
-            <Trash2 size={22} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <StatusBar barStyle="dark-content" />
 
       <KeyboardAvoidingView 
         style={styles.keyboardView} 
@@ -145,7 +178,7 @@ export default function ChatScreen() {
       >
         {suggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsContent}>
               {suggestions.map((q) => (
                 <TouchableOpacity 
                   key={q.id} 
@@ -177,24 +210,37 @@ export default function ChatScreen() {
         />
 
         <View style={styles.bottomSection}>
+          {showCounter && (
+            <View style={[styles.usageBar, isLimitReached && styles.usageBarBlocked]}>
+              <Zap size={14} color={isLimitReached ? theme.colors.error : theme.colors.primary} />
+              <Text style={[styles.usageText, isLimitReached && styles.usageTextBlocked]}>
+                {isLimitReached
+                  ? `AI limit reached — ${aiUsed}/${aiLimit} used`
+                  : `${remainingAIRequests} of ${aiLimit} AI requests remaining`}
+              </Text>
+            </View>
+          )}
           <View style={styles.inputWrapper}>
-             <TouchableOpacity 
-                style={[styles.sendButton, !inputText.trim() && { backgroundColor: '#e2e8f0' }]} 
-                onPress={sendMessage}
-                disabled={!inputText.trim() || isLoading}
-             >
-                <Send size={20} color={!inputText.trim() ? '#94a3b8' : "#fff"} />
-             </TouchableOpacity>
-
-            <TextInput
+             <TextInput
               style={styles.input}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Ask anything about construction..."
-              placeholderTextColor="#94a3b8"
+              placeholder={isLimitReached ? 'AI limit reached for this cycle…' : 'Ask anything about construction...'}
+              placeholderTextColor={theme.colors.textMuted}
               multiline
               maxLength={1000}
+              editable={!isLimitReached}
             />
+             <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || isLimitReached) && styles.sendButtonDisabled,
+                ]}
+                onPress={sendMessage}
+                disabled={!inputText.trim() || isLoading || isLimitReached}
+             >
+                <Send size={20} color={(!inputText.trim() || isLimitReached) ? theme.colors.textMuted : theme.colors.white} />
+             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -204,55 +250,137 @@ export default function ChatScreen() {
 
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { 
-    backgroundColor: theme.colors.primary, 
-    paddingTop: 10, 
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  headerIconBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: 'white', letterSpacing: 0.5 },
-  keyboardView: { flex: 1 },
-  suggestionsContainer: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.colors.background 
+  } as ViewStyle,
+  keyboardView: { 
+    flex: 1 
+  } as ViewStyle,
+  suggestionsContainer: { 
+    padding: theme.spacing.md, 
+    borderBottomWidth: 1, 
+    borderBottomColor: theme.colors.divider,
+    backgroundColor: theme.colors.white,
+  } as ViewStyle,
   suggestionChip: { 
-    backgroundColor: 'white', 
+    backgroundColor: theme.colors.white, 
     borderWidth: 1, 
-    borderColor: '#e2e8f0', 
-    paddingVertical: 8, 
+    borderColor: theme.colors.divider, 
+    paddingVertical: 10, 
     paddingHorizontal: 16, 
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  suggestionText: { fontSize: 13, color: '#334155', fontWeight: '600' },
-  chatContent: { paddingHorizontal: 16, paddingVertical: 20 },
-  messageContainer: { width: '100%', marginVertical: 6 },
-  userMessageContainer: { alignItems: 'flex-end' },
-  assistantMessageContainer: { alignItems: 'flex-start' },
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  suggestionText: { 
+    ...theme.typography.small,
+    color: theme.colors.text, 
+    fontWeight: '700' 
+  } as TextStyle,
+  chatContent: { 
+    paddingHorizontal: theme.spacing.lg, 
+    paddingVertical: theme.spacing.xl 
+  } as ViewStyle,
+  messageContainer: { 
+    width: '100%', 
+    marginVertical: 4 
+  } as ViewStyle,
+  userMessageContainer: { 
+    alignItems: 'flex-end' 
+  } as ViewStyle,
+  assistantMessageContainer: { 
+    alignItems: 'flex-start' 
+  } as ViewStyle,
   messageBubble: { 
     maxWidth: '85%', 
     padding: 14, 
     borderRadius: 18, 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 4, 
-    elevation: 2 
-  },
-  userBubble: { backgroundColor: theme.colors.primary, borderBottomRightRadius: 2 },
-  assistantBubble: { backgroundColor: 'white', borderBottomLeftRadius: 2 },
-  messageText: { fontSize: 15, lineHeight: 22, fontWeight: '500' },
-  userText: { color: 'white' },
-  assistantText: { color: '#1e293b' },
-  loadingBubble: { paddingVertical: 10, paddingHorizontal: 16 },
-  bottomSection: { backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9' },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  input: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 24, paddingHorizontal: 20, paddingVertical: 10, fontSize: 15, color: '#0f172a', maxHeight: 100 },
-  sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 2 }
+  } as ViewStyle,
+  userBubble: { 
+    backgroundColor: theme.colors.primary, 
+    borderBottomRightRadius: 2,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  assistantBubble: { 
+    backgroundColor: theme.colors.white, 
+    borderBottomLeftRadius: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  messageText: { 
+    ...theme.typography.body,
+    lineHeight: 22, 
+  } as TextStyle,
+  userText: { 
+    color: theme.colors.white 
+  } as TextStyle,
+  assistantText: { 
+    color: theme.colors.text 
+  } as TextStyle,
+  loadingBubble: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 16 
+  } as ViewStyle,
+  bottomSection: { 
+    backgroundColor: theme.colors.white, 
+    paddingHorizontal: theme.spacing.lg, 
+    paddingVertical: theme.spacing.md, 
+    borderTopWidth: 1, 
+    borderTopColor: theme.colors.divider,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+  } as ViewStyle,
+  inputWrapper: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.sm 
+  } as ViewStyle,
+  input: { 
+    flex: 1, 
+    backgroundColor: theme.colors.surface, 
+    borderRadius: 24, 
+    paddingHorizontal: 20, 
+    paddingVertical: 12, 
+    ...theme.typography.body,
+    color: theme.colors.text, 
+    maxHeight: 120 
+  } as TextStyle,
+  sendButton: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: 24, 
+    backgroundColor: theme.colors.primary, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  sendButtonDisabled: { 
+    backgroundColor: theme.colors.surface 
+  } as ViewStyle,
+  usageBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 8,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surface,
+    alignSelf: 'flex-start',
+  } as ViewStyle,
+  usageBarBlocked: {
+    backgroundColor: '#FEE2E2',
+  } as ViewStyle,
+  usageText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    fontWeight: '700',
+  } as TextStyle,
+  usageTextBlocked: {
+    color: theme.colors.error,
+  } as TextStyle,
+  textRight: { textAlign: 'right' } as TextStyle,
+  textLeft: { textAlign: 'left' } as TextStyle,
+  suggestionsContent: { gap: 8 } as ViewStyle
 });
 

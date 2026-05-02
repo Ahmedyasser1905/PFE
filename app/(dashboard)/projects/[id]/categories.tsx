@@ -186,15 +186,7 @@ export default function CategoriesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Simple Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color="#0F172A" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Select Category</Text>
-      </View>
-
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -250,67 +242,93 @@ export default function CategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 16,
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  scrollContent: { padding: theme.spacing.lg },
+  titleSection: { marginBottom: theme.spacing.xl },
+  breadcrumbTitle: { 
+    ...theme.typography.h2,
+    color: theme.colors.text, 
+    letterSpacing: -0.5 
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
-  backBtn: { padding: 4 },
-  scrollContent: { padding: 20 },
-  titleSection: { marginBottom: 24 },
-  breadcrumbTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: '#64748B', marginTop: 4 },
+  subtitle: { 
+    ...theme.typography.small,
+    color: theme.colors.textSecondary, 
+    marginTop: 4 
+  },
   list: { gap: 12 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderColor: theme.colors.border,
+    ...theme.shadows.xs,
   },
-  cardPressed: { backgroundColor: '#F1F5F9', borderColor: theme.colors.primary },
+  cardPressed: { 
+    backgroundColor: theme.colors.surface, 
+    borderColor: theme.colors.primary 
+  },
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    borderRadius: theme.roundness.md,
+    backgroundColor: theme.colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: theme.spacing.lg,
   },
   cardContent: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  cardSubtitle: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  cardTitle: { 
+    ...theme.typography.bodyBold,
+    color: theme.colors.text 
+  },
+  cardSubtitle: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted, 
+    marginTop: 2 
+  },
   countBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 12,
+    borderRadius: theme.roundness.sm,
+    marginRight: theme.spacing.md,
   },
-  countBadgeActive: { backgroundColor: '#E0F2FE' },
-  countBadgeEmpty: { backgroundColor: '#F1F5F9' },
-  countText: { fontSize: 10, fontWeight: '800' },
-  countTextActive: { color: '#0369A1' },
-  countTextEmpty: { color: '#94A3B8' },
+  countBadgeActive: { backgroundColor: theme.colors.infoLight },
+  countBadgeEmpty: { backgroundColor: theme.colors.surfaceSecondary },
+  countText: { 
+    ...theme.typography.caption,
+    fontSize: 10, 
+    fontWeight: '800' 
+  },
+  countTextActive: { color: theme.colors.info },
+  countTextEmpty: { color: theme.colors.textMuted },
   loader: { marginTop: 60, alignItems: 'center', gap: 12 },
-  loaderText: { color: '#64748B', fontWeight: '600' },
+  loaderText: { 
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textSecondary 
+  },
   errorContainer: { marginTop: 60, alignItems: 'center', gap: 12 },
-  errorMsg: { color: '#EF4444', textAlign: 'center', paddingHorizontal: 20 },
-  retryBtn: { backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryBtnText: { color: '#fff', fontWeight: '700' },
+  errorMsg: { 
+    ...theme.typography.body,
+    color: theme.colors.error, 
+    textAlign: 'center', 
+    paddingHorizontal: 20 
+  },
+  retryBtn: { 
+    backgroundColor: theme.colors.primary, 
+    paddingHorizontal: 24, 
+    paddingVertical: 12, 
+    borderRadius: theme.roundness.lg 
+  },
+  retryBtnText: { 
+    color: theme.colors.white, 
+    fontWeight: '700' 
+  },
   emptyContainer: { marginTop: 60, alignItems: 'center', gap: 12 },
-  emptyText: { color: '#94A3B8', fontWeight: '600' },
+  emptyText: { 
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textMuted 
+  },
 });

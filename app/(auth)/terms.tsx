@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, StatusBar, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, FileText, Gavel } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { Gavel } from 'lucide-react-native';
 import { theme } from '~/constants/theme';
+import BackButton from '~/components/common/BackButton';
+
 export default function TermsScreen() {
-    const router = useRouter();
     const sections = [
         {
             title: '1. Acceptance of Terms',
@@ -35,11 +35,9 @@ export default function TermsScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color={theme.colors.text} />
-                </TouchableOpacity>
+                <BackButton size={24} fallbackHref="/(auth)/login" />
                 <Text style={styles.headerTitle}>Terms & Conditions</Text>
-                <View style={{ width: 40 }} />
+                <View style={{ width: 44 }} />
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.iconContainer}>
@@ -64,11 +62,12 @@ export default function TermsScreen() {
         </SafeAreaView>
     );
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8fafc',
-    },
+    } as ViewStyle,
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -79,28 +78,20 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
-    },
-    backBtn: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 20,
-        backgroundColor: '#f1f5f9',
-    },
+    } as ViewStyle,
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
         color: theme.colors.text,
-    },
+    } as TextStyle,
     scrollContent: {
         padding: theme.spacing.lg,
         paddingBottom: 40,
-    },
+    } as ViewStyle,
     iconContainer: {
         alignItems: 'center',
         marginVertical: 32,
-    },
+    } as ViewStyle,
     iconCircle: {
         width: 64,
         height: 64,
@@ -114,18 +105,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
-    },
+    } as ViewStyle,
     title: {
         fontSize: 24,
         fontWeight: '800',
         color: '#0f172a',
         textAlign: 'center',
-    },
+    } as TextStyle,
     lastUpdated: {
         fontSize: 14,
         color: '#64748b',
         marginTop: 8,
-    },
+    } as TextStyle,
     section: {
         backgroundColor: 'white',
         borderRadius: 16,
@@ -133,27 +124,26 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         borderWidth: 1,
         borderColor: '#e2e8f0',
-    },
+    } as ViewStyle,
     sectionTitle: {
         fontSize: 18,
         fontWeight: '700',
         color: '#1e40af',
         marginBottom: 12,
-    },
+    } as TextStyle,
     sectionContent: {
         fontSize: 15,
         color: '#334155',
         lineHeight: 24,
-    },
+    } as TextStyle,
     footer: {
         padding: 20,
         alignItems: 'center',
-    },
+    } as ViewStyle,
     footerText: {
         fontSize: 14,
         color: '#64748b',
         textAlign: 'center',
         lineHeight: 20,
-    }
+    } as TextStyle,
 });
-

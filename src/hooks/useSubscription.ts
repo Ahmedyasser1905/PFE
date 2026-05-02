@@ -17,19 +17,25 @@ interface UseSubscriptionResult {
   hasSubscription: boolean;
   refresh: () => Promise<void>;
   incrementCalculationUsage: () => void;
+  incrementAIUsage: () => void;
 }
 
 import { useAuth } from '~/context/AuthContext';
 
 export function useSubscription(): UseSubscriptionResult {
   const { user } = useAuth();
+  // Depend on a stable identity, not the user object reference. AuthContext
+  // calls setUser twice during startup (storage restore -> profile verify),
+  // and each call swaps the object reference. Without this, the effect below
+  // re-fires and we fetch /subscriptions/me + /usage twice on every login.
+  const userId = user?.id ?? null;
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setSubscription(null);
       setUsage(null);
       setLoading(false);
@@ -92,7 +98,7 @@ export function useSubscription(): UseSubscriptionResult {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     fetchData();
@@ -111,6 +117,19 @@ export function useSubscription(): UseSubscriptionResult {
     });
   }, []);
 
+  const incrementAIUsage = useCallback(() => {
+    setUsage((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        aiUsageLimit: {
+          ...prev.aiUsageLimit,
+          used: prev.aiUsageLimit.used + 1,
+        },
+      };
+    });
+  }, []);
+
   return {
     subscription,
     usage,
@@ -119,5 +138,6 @@ export function useSubscription(): UseSubscriptionResult {
     hasSubscription: !!subscription,
     refresh: fetchData,
     incrementCalculationUsage,
+    incrementAIUsage,
   };
 }

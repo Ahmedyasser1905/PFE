@@ -12,17 +12,10 @@
  *  - projects/[id]/categories.tsx
  */
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ViewStyle,
-} from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import { theme } from '~/constants/theme';
+import BackButton from './BackButton';
 
 interface ScreenShellProps {
   title?: string;
@@ -42,16 +35,11 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
   style,
   showHeader = true,
 }) => {
-  const router = useRouter();
-  const handleBack = onBack ?? (() => router.back());
-
   return (
     <SafeAreaView style={[styles.container, style]} edges={['top']}>
       {showHeader && (
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <ArrowLeft size={22} color={theme.colors.text} />
-          </TouchableOpacity>
+          <BackButton onPress={onBack} />
           {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : <View style={{ flex: 1 }} />}
           <View style={styles.rightSlot}>{rightAction ?? null}</View>
         </View>
@@ -72,14 +60,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   title: {
     flex: 1,

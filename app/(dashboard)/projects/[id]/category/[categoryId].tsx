@@ -7,20 +7,22 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
-  
+
   Platform,
   Dimensions,
   Keyboard,
   Modal,
   FlatList,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { 
-  ArrowLeft, 
-  Calculator, 
-  ChevronDown, 
-  Share2, 
+import {
+  ArrowLeft,
+  Calculator,
+  ChevronDown,
+  Share2,
   Printer,
   Bookmark,
   DollarSign,
@@ -39,20 +41,420 @@ import { useFeedback } from '~/context/FeedbackContext';
 
 const { width } = Dimensions.get('window');
 
+// ── Styles ──────────────────────────────────
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  } as ViewStyle,
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  } as ViewStyle,
+
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: 40,
+  } as ViewStyle,
+  titleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+    gap: theme.spacing.md,
+  } as ViewStyle,
+  titleIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  pageTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+  } as TextStyle,
+  pageSubtitle: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '600',
+  } as TextStyle,
+
+  // Subcategory (Browse Mode)
+  subCatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  subCatText: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.text,
+  } as TextStyle,
+
+  // Card Base
+  card: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.roundness.xl,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
+  } as ViewStyle,
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm
+  } as ViewStyle,
+  cardTitle: {
+    ...theme.typography.caption,
+    fontWeight: '800',
+    color: theme.colors.text,
+    letterSpacing: 1,
+  } as TextStyle,
+  cardBody: {
+    padding: theme.spacing.lg
+  } as ViewStyle,
+
+  // Inputs
+  inputGroup: {
+    marginBottom: theme.spacing.lg
+  } as ViewStyle,
+  inputLabel: {
+    ...theme.typography.caption,
+    fontWeight: '800',
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+    letterSpacing: 0.8,
+  } as TextStyle,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md,
+  } as ViewStyle,
+  textInput: {
+    flex: 1,
+    ...theme.typography.bodyBold,
+    color: theme.colors.text,
+  } as TextStyle,
+  unitTag: {
+    ...theme.typography.caption,
+    fontWeight: '800',
+    color: theme.colors.textMuted,
+  } as TextStyle,
+
+  calculateBtn: {
+    height: 60,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.roundness.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    ...theme.shadows.md,
+  } as ViewStyle,
+  calculateBtnText: {
+    color: theme.colors.white,
+    ...theme.typography.bodyBold,
+    letterSpacing: 1,
+  } as TextStyle,
+  btnDisabled: {
+    opacity: 0.7,
+  } as ViewStyle,
+  resetLink: {
+    alignSelf: 'center',
+    marginTop: theme.spacing.lg,
+    padding: 8
+  } as ViewStyle,
+  resetLinkText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    letterSpacing: 0.5,
+  } as TextStyle,
+
+  // Results (Blue Card)
+  resultsCard: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.md,
+  } as ViewStyle,
+  readyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.success
+  } as ViewStyle,
+  readyBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  } as ViewStyle,
+  readyBadgeText: {
+    ...theme.typography.caption,
+    fontWeight: '800',
+    color: theme.colors.white,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  resultsGrid: {
+    padding: theme.spacing.lg,
+    gap: 12
+  } as ViewStyle,
+  resultItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  } as ViewStyle,
+  resultItemTotal: {
+    marginTop: 8,
+    borderBottomWidth: 0,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 12,
+    borderRadius: 8,
+  } as ViewStyle,
+  resultLabel: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '700',
+  } as TextStyle,
+  resultLabelTotal: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontWeight: '800'
+  } as TextStyle,
+  resultValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4
+  } as ViewStyle,
+  resultValue: {
+    ...theme.typography.h3,
+    color: theme.colors.white,
+  } as TextStyle,
+  resultValueTotal: {
+    fontSize: 24,
+    fontWeight: '900'
+  } as TextStyle,
+  resultUnit: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '600',
+  } as TextStyle,
+  resultUnitTotal: {
+    color: theme.colors.white,
+    opacity: 0.9
+  } as TextStyle,
+
+  materialsSection: {
+    marginTop: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    padding: 12,
+    borderRadius: 12,
+  } as ViewStyle,
+  materialsHeader: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 8,
+    letterSpacing: 1,
+  } as TextStyle,
+  materialRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  } as ViewStyle,
+  materialInfo: { flex: 1 } as ViewStyle,
+  materialName: {
+    ...theme.typography.small,
+    fontWeight: '700',
+    color: theme.colors.white,
+  } as TextStyle,
+  materialQty: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.7)',
+  } as TextStyle,
+  materialCostBox: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  } as ViewStyle,
+  materialCost: {
+    ...theme.typography.small,
+    fontWeight: '800',
+    color: theme.colors.white,
+  } as TextStyle,
+  totalCostDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 4,
+  } as ViewStyle,
+
+  // Cost Estimation
+  optionalBadge: {
+    backgroundColor: theme.colors.surfaceSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.roundness.sm
+  } as ViewStyle,
+  optionalBadgeText: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.colors.textSecondary
+  } as TextStyle,
+  helperText: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16
+  } as TextStyle,
+  outlineBtn: {
+    height: 52,
+    borderRadius: theme.roundness.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  } as ViewStyle,
+  outlineBtnText: {
+    color: theme.colors.primary,
+    ...theme.typography.bodyBold,
+    fontSize: 14,
+    letterSpacing: 0.5
+  } as TextStyle,
+
+  // Formulas
+  formulaGroup: { gap: 8 } as ViewStyle,
+  formulaLabel: {
+    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.colors.textMuted,
+    letterSpacing: 0.5
+  } as TextStyle,
+  formulaDisplay: {
+    backgroundColor: theme.colors.surface,
+    padding: 12,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+  } as ViewStyle,
+  formulaDisplayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
+  } as TextStyle,
+
+  // Footer Save Btn
+  saveBtn: {
+    height: 56,
+    borderRadius: theme.roundness.lg,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+  } as ViewStyle,
+  saveBtnText: {
+    color: theme.colors.primary,
+    ...theme.typography.bodyBold,
+    fontSize: 14,
+    letterSpacing: 0.5
+  } as TextStyle,
+  sectionTitleRecent: {
+    ...theme.typography.h3,
+    color: theme.colors.white,
+    marginTop: 24, 
+    marginBottom: 12,
+  } as TextStyle,
+  resultsTitle: {
+    ...theme.typography.caption,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1,
+  } as TextStyle,
+  spacer40: { height: 40 } as ViewStyle,
+  flex1: { flex: 1 } as ViewStyle,
+  gap12: { gap: 12 } as ViewStyle,
+  rotate90: { transform: [{ rotate: '-90deg' }] } as ViewStyle,
+  skeletonTextContainer: { flex: 1, marginLeft: 16 } as ViewStyle,
+  mt8: { marginTop: 8 } as ViewStyle,
+  mb20: { marginBottom: 20 } as ViewStyle,
+});
+
+// ── Components ───────────────────────────────
+
+const ResultItem = ({ label, value, unit, isTotal }: { label: string; value: string; unit: string; isTotal?: boolean }) => (
+
+  <View style={[styles.resultItem, isTotal && styles.resultItemTotal]}>
+    <Text style={[styles.resultLabel, isTotal && styles.resultLabelTotal]}>{label}</Text>
+    <View style={styles.resultValueRow}>
+      <Text style={[styles.resultValue, isTotal && styles.resultValueTotal]}>{value}</Text>
+      <Text style={[styles.resultUnit, isTotal && styles.resultUnitTotal]}>{unit}</Text>
+    </View>
+  </View>
+);
+
 export default function LeafCalculationScreen() {
   const router = useRouter();
-  const { categoryId, id, title, editId } = useLocalSearchParams<{ categoryId: string; id: string; title: string; editId?: string }>();
-  const { canCalculate, hasSubscription, incrementCalculationUsage } = useSubscriptionContext();
-  const { showFeedback } = useFeedback();
+  const { id, categoryId, title, projectName, editId } = useLocalSearchParams<{
+    id: string;
+    categoryId: string;
+    title?: string;
+    projectName?: string;
+    editId?: string;
+  }>();
 
   // ── State ────────────────────────────────────
   const [viewMode, setViewMode] = useState<'browse' | 'calculate'>('browse');
   const [subcategories, setSubcategories] = useState<Category[]>([]);
   const [leaf, setLeaf] = useState<LeafDetail | null>(null);
-  const [projectName, setProjectName] = useState<string>('PROJECT');
+  const [projectTitle, setProjectTitle] = useState<string>(projectName || 'PROJECT');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Derived Display Strings
+  const displayTitle = (title || leaf?.nameEn || 'Category').toString();
+  const displayProjectName = (projectTitle || 'Project').toString();
+  const { canCalculate, hasSubscription, incrementCalculationUsage } = useSubscriptionContext();
+  const { showFeedback } = useFeedback();
 
   // Selection
   const [selectedFormula, setSelectedFormula] = useState<Formula | null>(null);
@@ -73,12 +475,12 @@ export default function LeafCalculationScreen() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch project data — validate estimation row exists BEFORE allowing calculation
       if (id) {
         try {
           const projectData = await estimationApi.getProject(id);
-          setProjectName(projectData?.name || 'PROJECT');
+          setProjectTitle(projectData?.name || 'PROJECT');
 
           // CRITICAL GUARD: If estimationId is null, the DB has no estimation row
           // for this project. saveLeaf will always 500 until this is fixed.
@@ -94,13 +496,13 @@ export default function LeafCalculationScreen() {
           // Re-throw our own typed error; swallow unrelated network errors
           if (pErr.message && pErr.message.includes('no estimation record')) throw pErr;
           console.warn('Failed to fetch project data:', pErr);
-          setProjectName('PROJECT');
+          setProjectTitle('PROJECT');
         }
       }
 
       // 1. Check if category has children (BRANCH)
       const children = await estimationApi.getCategoryChildren(categoryId).catch(() => []);
-      
+
       if (children && children.length > 0) {
         setSubcategories(children);
         setViewMode('browse');
@@ -164,14 +566,14 @@ export default function LeafCalculationScreen() {
 
   const handleCalculate = useCallback(async () => {
     if (!selectedFormula || !leaf || !id) return;
-    
+
     // PRE-FLIGHT GUARD: Abort immediately if leaf or project state is inconsistent.
     // This is a secondary safety net — the primary guard is in initCategory.
     if (!leaf.categoryId) {
       showFeedback({ title: 'Error', message: 'Invalid category data. Please go back and try again.', type: 'error' });
       return;
     }
-    
+
     // Subscription guard: warn if at calculation limit
     if (hasSubscription && !canCalculate) {
       showFeedback({
@@ -181,11 +583,11 @@ export default function LeafCalculationScreen() {
       });
       return;
     }
-    
+
     Keyboard.dismiss();
     try {
       setCalculating(true);
-      
+
       // 1. SAFE INPUT MAPPING: Parse all defined fields for the selected formula, fallback to 0
       const numericFields: Record<string, number> = {};
       (selectedFormula.fields || []).forEach(field => {
@@ -199,6 +601,9 @@ export default function LeafCalculationScreen() {
         selected_formula_id: selectedFormula.formulaId,
         selected_config_id: selectedConfig?.configId ?? null,
         field_values: numericFields,
+        project_name: displayProjectName,
+        category_name: displayTitle,
+        project_id: id,
       };
 
       // 2. RUN ENGINE: Stateless preview calculation
@@ -216,7 +621,7 @@ export default function LeafCalculationScreen() {
     } finally {
       setCalculating(false);
     }
-  }, [selectedFormula, leaf, selectedConfig, fieldValues, canCalculate, hasSubscription, incrementCalculationUsage, showFeedback]);
+  }, [selectedFormula, leaf, selectedConfig, fieldValues, canCalculate, hasSubscription, incrementCalculationUsage, showFeedback, displayProjectName, displayTitle, id]);
 
   const handleSave = useCallback(async () => {
     if (!selectedFormula || !leaf || !id || !results) {
@@ -244,7 +649,7 @@ export default function LeafCalculationScreen() {
         Object.assign(resultObj, results.results);
       }
 
-      const totalFromMaterials = (results.materialLines || []).reduce((sum, m) => sum + (m.subTotal || 0), 0);
+      const totalFromMaterials = (results.materialLines || []).reduce((sum: number, m: any) => sum + (m.subTotal || 0), 0);
       const leafTotal = results.totalCost > 0 ? results.totalCost : totalFromMaterials;
       resultObj['_computed_leaf_total'] = leafTotal;
 
@@ -274,7 +679,15 @@ export default function LeafCalculationScreen() {
         calculation_status: 'DONE',
       };
 
-      await estimationApi.saveLeaf(savePayload);
+      if (__DEV__) {
+        console.log('[LeafCalc] Saving Payload:', JSON.stringify(savePayload, null, 2));
+      }
+
+      const response = await estimationApi.saveLeaf(savePayload);
+
+      if (__DEV__) {
+        console.log('[LeafCalc] Save Response:', JSON.stringify(response, null, 2));
+      }
 
       showFeedback({
         title: 'Success',
@@ -291,9 +704,7 @@ export default function LeafCalculationScreen() {
     } finally {
       setSaving(false);
     }
-  }, [selectedFormula, leaf, id, results, selectedConfig, editId, fieldValues, showFeedback]);
-
-  // handleSave removed as it's merged into handleCalculate
+  }, [selectedFormula, leaf, id, results, selectedConfig, fieldValues, showFeedback, editId]);
 
   const handleReset = useCallback(() => {
     if (selectedFormula) {
@@ -306,24 +717,24 @@ export default function LeafCalculationScreen() {
     }
   }, [selectedFormula]);
 
-  if (loading) return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Skeleton width={100} height={20} />
-      </View>
-      <View style={styles.scrollContent}>
-        <View style={styles.titleSection}>
-          <Skeleton width={48} height={48} borderRadius={24} />
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <Skeleton width="60%" height={24} />
-            <Skeleton width="40%" height={16} style={{ marginTop: 8 }} />
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={styles.titleSection}>
+            <Skeleton width={48} height={48} borderRadius={24} />
+            <View style={styles.skeletonTextContainer}>
+              <Skeleton width="60%" height={24} />
+              <Skeleton width="40%" height={16} style={styles.mt8} />
+            </View>
           </View>
-        </View>
-        <Skeleton width="100%" height={200} borderRadius={16} style={{ marginBottom: 20 }} />
-        <Skeleton width="100%" height={150} borderRadius={16} style={{ marginBottom: 20 }} />
-      </View>
-    </SafeAreaView>
-  );
+          <Skeleton width="100%" height={200} borderRadius={16} style={styles.mb20} />
+          <Skeleton width="100%" height={150} borderRadius={16} style={styles.mb20} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (error) return (
     <ErrorScreen
@@ -334,37 +745,22 @@ export default function LeafCalculationScreen() {
     />
   );
 
-  const displayTitle = (title || leaf?.nameEn || 'Category').toString();
-  const displayProjectName = (projectName || 'Project').toString();
-
-  // ── BROWSE MODE (Subcategories) ─────────────────────────
   if (viewMode === 'browse') {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-              <ArrowLeft size={24} color="#0F172A" />
-            </Pressable>
-            <View>
-              <Text style={styles.headerTitle}>{displayTitle}</Text>
-              <Text style={styles.headerSubtitle}>{displayProjectName}</Text>
-            </View>
-          </View>
-        </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.titleSection}>
             <View style={styles.titleIconBox}>
               <LayoutGrid size={24} color={theme.colors.primary} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.flex1}>
               <Text style={styles.pageTitle}>{displayTitle}</Text>
               <Text style={styles.pageSubtitle}>Select a sub-category to continue</Text>
             </View>
           </View>
 
-          <View style={{ gap: 12 }}>
+          <View style={styles.gap12}>
             {subcategories.map(sub => (
               <Pressable
                 key={sub.categoryId}
@@ -375,7 +771,7 @@ export default function LeafCalculationScreen() {
                 })}
               >
                 <Text style={styles.subCatText}>{sub.nameEn}</Text>
-                <ChevronDown style={{ transform: [{ rotate: '-90deg' }] }} size={20} color="#CBD5E1" />
+                <ChevronDown style={styles.rotate90} size={20} color="#CBD5E1" />
               </Pressable>
             ))}
           </View>
@@ -386,22 +782,7 @@ export default function LeafCalculationScreen() {
 
   // ── CALCULATE MODE (Leaf) ──────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 1. Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <ArrowLeft size={24} color="#0F172A" />
-          </Pressable>
-          <View>
-            <Text style={styles.headerTitle}>{displayTitle}</Text>
-            <Text style={styles.headerSubtitle}>{displayProjectName}</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <Pressable style={styles.headerActionBtn}><Share2 size={18} color="#64748B" /></Pressable>
-        </View>
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* 2. Title Section */}
@@ -409,7 +790,7 @@ export default function LeafCalculationScreen() {
           <View style={styles.titleIconBox}>
             <Calculator size={24} color={theme.colors.primary} />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={styles.flex1}>
             <Text style={styles.pageTitle}>{displayTitle}</Text>
             <Text style={styles.pageSubtitle} numberOfLines={2}>Structural quantities configuration for construction items.</Text>
           </View>
@@ -457,8 +838,8 @@ export default function LeafCalculationScreen() {
               />
             )}
 
-            <Pressable 
-              style={[styles.calculateBtn, calculating && styles.btnDisabled]} 
+            <Pressable
+              style={[styles.calculateBtn, calculating && styles.btnDisabled]}
               onPress={handleCalculate}
               disabled={calculating}
             >
@@ -483,7 +864,7 @@ export default function LeafCalculationScreen() {
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
               <View style={styles.readyDot} />
-              <Text style={[styles.cardTitle, { color: '#fff' }]}>RESULTS</Text>
+              <Text style={styles.resultsTitle}>RESULTS</Text>
             </View>
             <View style={styles.readyBadge}>
               <Text style={styles.readyBadgeText}>{results ? 'READY' : 'PENDING'}</Text>
@@ -498,7 +879,7 @@ export default function LeafCalculationScreen() {
                 }
 
                 const renderedItems = [];
-                
+
                 // 1. Intermediates
                 const intermediates = results.intermediateResults || [];
                 if (intermediates.length > 0) {
@@ -539,21 +920,21 @@ export default function LeafCalculationScreen() {
                     <View key="materials-section" style={styles.materialsSection}>
                       <Text style={styles.materialsHeader}>MATERIALS BREAKDOWN</Text>
                       {materials.map((m: any, idx: number) => {
-                         const name = m.materialNameEn || m.materialName || 'Material';
-                         const qty = typeof m.quantityWithWaste === 'number' ? m.quantityWithWaste.toFixed(2) : '0.00';
-                         const unit = m.unitSymbol || '';
-                         const cost = typeof m.subTotal === 'number' ? m.subTotal.toFixed(2) : '0.00';
-                         return (
-                           <View key={`mat-${idx}`} style={styles.materialRow}>
-                             <View style={styles.materialInfo}>
-                               <Text style={styles.materialName}>{name}</Text>
-                               <Text style={styles.materialQty}>{qty} {unit}</Text>
-                             </View>
-                             <View style={styles.materialCostBox}>
-                               <Text style={styles.materialCost}>{cost} DZD</Text>
-                             </View>
-                           </View>
-                         );
+                        const name = m.materialNameEn || m.materialName || 'Material';
+                        const qty = typeof m.quantityWithWaste === 'number' ? m.quantityWithWaste.toFixed(2) : '0.00';
+                        const unit = m.unitSymbol || '';
+                        const cost = typeof m.subTotal === 'number' ? m.subTotal.toFixed(2) : '0.00';
+                        return (
+                          <View key={`mat-${idx}`} style={styles.materialRow}>
+                            <View style={styles.materialInfo}>
+                              <Text style={styles.materialName}>{name}</Text>
+                              <Text style={styles.materialQty}>{qty} {unit}</Text>
+                            </View>
+                            <View style={styles.materialCostBox}>
+                              <Text style={styles.materialCost}>{cost} DZD</Text>
+                            </View>
+                          </View>
+                        );
                       })}
                     </View>
                   );
@@ -565,11 +946,11 @@ export default function LeafCalculationScreen() {
                     <View key="total-cost" style={styles.totalCostDivider} />
                   );
                   renderedItems.push(
-                    <ResultItem 
+                    <ResultItem
                       key="total-cost-item"
-                      label="TOTAL ESTIMATED COST" 
-                      value={results.totalCost.toFixed(2)} 
-                      unit="DZD" 
+                      label="TOTAL ESTIMATED COST"
+                      value={results.totalCost.toFixed(2)}
+                      unit="DZD"
                       isTotal
                     />
                   );
@@ -589,8 +970,8 @@ export default function LeafCalculationScreen() {
         </View>
 
         {results && (
-          <Pressable 
-            style={[styles.saveBtn, saving && styles.btnDisabled]} 
+          <Pressable
+            style={[styles.saveBtn, saving && styles.btnDisabled]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -619,7 +1000,7 @@ export default function LeafCalculationScreen() {
             onSelect={handleFormulaSelect}
           />
         )}
-        
+
         {selectedFormula && (
           <View style={styles.formulaDisplay}>
             <Text style={styles.formulaDisplayText}>{selectedFormula.expression || 'V = L * W * H'}</Text>
@@ -628,258 +1009,13 @@ export default function LeafCalculationScreen() {
 
         {/* Footer Button removed as it's merged into CALCULATE ESTIMATION */}
 
-        <View style={{ height: 40 }} />
+        <View style={styles.spacer40} />
       </ScrollView>
 
     </SafeAreaView>
   );
 }
 
-// ── Components ───────────────────────────────
-
-const ResultItem = ({ label, value, unit, isTotal }: { label: string; value: string; unit: string; isTotal?: boolean }) => (
-  <View style={[styles.resultItem, isTotal && styles.resultItemTotal]}>
-    <Text style={[styles.resultLabel, isTotal && styles.resultLabelTotal]}>{label}</Text>
-    <View style={styles.resultValueRow}>
-      <Text style={[styles.resultValue, isTotal && styles.resultValueTotal]}>{value}</Text>
-      <Text style={[styles.resultUnit, isTotal && styles.resultUnitTotal]}>{unit}</Text>
-    </View>
-  </View>
-);
-
 // ── Styles ──────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  iconBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  headerSubtitle: { fontSize: 11, fontWeight: '600', color: '#64748B' },
-  headerRight: { flexDirection: 'row', gap: 8 },
-  headerActionBtn: {
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  scrollContent: { paddingHorizontal: 20 },
-  titleSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 24,
-    gap: 16,
-  },
-  titleIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A' },
-  pageSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
-
-  // Subcategory (Browse Mode)
-  subCatCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    padding: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  subCatText: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-
-  // Card Base
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
-      android: { elevation: 2 },
-    }),
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardTitle: { fontSize: 12, fontWeight: '800', color: '#0F172A', letterSpacing: 1 },
-  cardBody: { padding: 16 },
-
-  // Inputs
-  inputGroup: { marginBottom: 16 },
-  inputLabel: { fontSize: 11, fontWeight: '800', color: '#94A3B8', marginBottom: 8, letterSpacing: 0.8 },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-  },
-  textInput: { flex: 1, fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  unitTag: { fontSize: 12, fontWeight: '800', color: '#CBD5E1' },
-  dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-  },
-  dropdownText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-
-  calculateBtn: {
-    height: 56,
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  calculateBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
-  resetLink: { alignSelf: 'center', marginTop: 16, padding: 8 },
-  resetLinkText: { fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.5 },
-
-  // Results (Blue Card)
-  resultsCard: {
-    backgroundColor: '#1E40AF',
-    borderColor: '#1E40AF',
-  },
-  readyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
-  readyBadge: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  readyBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  resultsGrid: { padding: 16, gap: 12 },
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    padding: 16,
-    borderRadius: 12,
-  },
-  resultItemTotal: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)', // emerald green tint
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.5)',
-    paddingVertical: 20,
-  },
-  resultLabel: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
-  resultLabelTotal: { color: '#34D399', fontSize: 13, fontWeight: '900' }, // bright emerald
-  resultValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  resultValue: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  resultValueTotal: { fontSize: 28, color: '#A7F3D0' }, // light emerald
-  resultUnit: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.4)' },
-  resultUnitTotal: { color: 'rgba(167, 243, 208, 0.7)' },
-  
-  // Materials Breakdown styles
-  materialsSection: {
-    marginTop: 8,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderRadius: 12,
-    padding: 16,
-  },
-  materialsHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  materialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  materialInfo: { flex: 1 },
-  materialName: { fontSize: 14, fontWeight: '700', color: '#E2E8F0', marginBottom: 4 },
-  materialQty: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
-  materialCostBox: { alignItems: 'flex-end' },
-  materialCost: { fontSize: 14, fontWeight: '800', color: '#fff' },
-  totalCostDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 4,
-  },
-
-  // Cost Estimation
-  optionalBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  optionalBadgeText: { fontSize: 10, fontWeight: '800', color: '#64748B' },
-  helperText: { fontSize: 13, color: '#64748B', lineHeight: 20, marginBottom: 16 },
-  outlineBtn: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#2563EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  outlineBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
-
-  // Formulas
-  formulaGroup: { gap: 8 },
-  formulaLabel: { fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
-  formulaDisplay: {
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  formulaDisplayText: { fontSize: 12, fontWeight: '700', color: '#2563EB', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-
-  // Footer Save Btn
-  saveBtn: {
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 10,
-  },
-  saveBtnText: { color: theme.colors.primary, fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
-  btnDisabled: { opacity: 0.5 },
-});

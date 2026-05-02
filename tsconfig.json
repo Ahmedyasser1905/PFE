@@ -8,6 +8,8 @@
     },
     "jsx": "react-native",
     "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },

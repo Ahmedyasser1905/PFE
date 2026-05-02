@@ -1,16 +1,19 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, I18nManager } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
-import { ArrowLeft, Bell, Settings, Search, LogOut } from 'lucide-react-native';
+import { User as UserIcon } from 'lucide-react-native';
+import BackButton from './BackButton';
 import { theme } from '~/constants/theme';
 import { useUser } from '~/hooks/useUser';
 import { useLanguage } from '~/context/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Header = () => {
   const { name, user } = useUser();
-  const { t, language, isRTL } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const segments = useSegments();
+  const insets = useSafeAreaInsets();
 
   const isArabic = language === 'ar';
 
@@ -38,20 +41,13 @@ const Header = () => {
   if (!user) return null;
 
   return (
-    <View style={[styles.headerContainer, isArabic && styles.rtlHeader]}>
+    <View style={[
+      styles.headerContainer, 
+      { paddingTop: insets.top },
+      isArabic && styles.rtlHeader
+    ]}>
       <View style={[styles.leftSection, isArabic && styles.rtlLeftSection]}>
-        {showBack && (
-          <TouchableOpacity 
-            style={styles.actionCircle} 
-            onPress={() => router.back()}
-          >
-            <ArrowLeft 
-              size={20} 
-              color={theme.colors.text} 
-              style={{ transform: [{ scaleX: isArabic ? -1 : 1 }] }}
-            />
-          </TouchableOpacity>
-        )}
+        {showBack && <BackButton size={24} />}
         <View style={[styles.titleWrapper, isArabic && styles.rtlTitleWrapper]}>
           <Text style={[styles.appTitle, isArabic && styles.rtlText]}>{getHeaderTitle()}</Text>
           {isRoot && (
@@ -63,15 +59,24 @@ const Header = () => {
       </View>
 
       <View style={[styles.rightSection, isArabic && styles.rtlRightSection]}>
-        {isRoot && (
-          <>
-            <TouchableOpacity 
-              style={styles.profileBadge}
-              onPress={() => router.push('/settings')}
-            >
-              <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-            </TouchableOpacity>
-          </>
+        {isRoot ? (
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.avatar}>
+               <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <UserIcon size={24} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -80,14 +85,15 @@ const Header = () => {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    height: 70,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: theme.colors.divider,
+    ...theme.shadows.xs,
   },
   rtlHeader: {
     flexDirection: 'row-reverse',
@@ -95,10 +101,18 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: theme.spacing.md,
   },
   rtlLeftSection: {
     flexDirection: 'row-reverse',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titleWrapper: {
     justifyContent: 'center',
@@ -107,15 +121,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   appTitle: {
-    fontSize: 18,
-    fontWeight: '900',
+    ...theme.typography.h4,
     color: theme.colors.text,
-    letterSpacing: -0.5,
   },
   welcomeText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     marginTop: -2,
   },
   rtlText: {
@@ -124,33 +135,32 @@ const styles = StyleSheet.create({
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: theme.spacing.sm,
   },
   rtlRightSection: {
     flexDirection: 'row-reverse',
   },
-  actionCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+  profileButton: {
+    padding: theme.spacing.xs,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
-  profileBadge: {
+  avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#EFF6FF',
+    ...theme.shadows.sm,
   },
   avatarText: {
-    color: 'white',
+    color: theme.colors.white,
     fontWeight: '800',
     fontSize: 16,
   },

@@ -8,8 +8,12 @@ import {
   FlatList,
   Dimensions,
   Animated,
+  Platform,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { ChevronDown, Check, X } from 'lucide-react-native';
+import { theme } from '~/constants/theme';
 
 interface NativeSelectProps<T> {
   label: string;
@@ -69,10 +73,10 @@ export function NativeSelect<T>({
         style={[styles.dropdown, isActive && styles.dropdownActive]}
         onPress={openModal}
       >
-        <Text style={value ? styles.dropdownValue : styles.dropdownPlaceholder}>
+        <Text style={value ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
           {value ? labelExtractor(value) : placeholder}
         </Text>
-        <ChevronDown size={20} color={value ? '#1e293b' : '#94a3b8'} />
+        <ChevronDown size={18} color={value ? theme.colors.text : theme.colors.textMuted} />
       </Pressable>
 
       <Modal
@@ -89,10 +93,11 @@ export function NativeSelect<T>({
               { transform: [{ translateY: slideAnim }] },
             ]}
           >
+            <View style={styles.indicator} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
-                <X size={24} color="#64748b" />
+                <X size={22} color={theme.colors.textMuted} />
               </Pressable>
             </View>
             <FlatList
@@ -113,7 +118,7 @@ export function NativeSelect<T>({
                     >
                       {labelExtractor(item)}
                     </Text>
-                    {isSelected && <Check size={20} color="#2563eb" />}
+                    {isSelected && <Check size={20} color={theme.colors.primary} />}
                   </Pressable>
                 );
               }}
@@ -129,96 +134,102 @@ export function NativeSelect<T>({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
-  },
+    marginBottom: theme.spacing.lg,
+  } as ViewStyle,
   label: {
-    marginBottom: 8,
-    fontWeight: '700',
-    color: '#475569',
-    fontSize: 14,
+    ...theme.typography.caption,
+    marginBottom: theme.spacing.xs,
+    fontWeight: '800',
+    color: theme.colors.textSecondary,
     marginLeft: 4,
-  },
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  } as TextStyle,
   dropdown: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 14,
+    backgroundColor: theme.colors.white,
+    padding: 16,
+    borderRadius: theme.roundness.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
+    ...theme.shadows.xs,
+  } as ViewStyle,
   dropdownActive: {
-    borderColor: '#2563eb',
-    borderWidth: 2,
-  },
+    borderColor: theme.colors.primary,
+    borderWidth: 1.5,
+  } as ViewStyle,
   dropdownValue: {
-    fontSize: 16,
-    color: '#1e293b',
-    fontWeight: '500',
-  },
+    ...theme.typography.bodyMedium,
+    color: theme.colors.text,
+  } as TextStyle,
   dropdownPlaceholder: {
-    fontSize: 16,
-    color: '#94a3b8',
-  },
+    ...theme.typography.body,
+    color: theme.colors.textMuted,
+  } as TextStyle,
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(15, 23, 42, 0.4)',
-  },
+  } as ViewStyle,
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-  },
+  } as ViewStyle,
   bottomSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: theme.colors.white,
+    borderTopLeftRadius: theme.roundness.xxl,
+    borderTopRightRadius: theme.roundness.xxl,
     maxHeight: height * 0.7,
-    paddingBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 20,
-  },
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    ...theme.shadows.lg,
+  } as ViewStyle,
+  indicator: {
+    width: 36,
+    height: 4,
+    backgroundColor: theme.colors.divider,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+  } as ViewStyle,
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 18,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
+    borderBottomColor: theme.colors.divider,
+  } as ViewStyle,
   sheetTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
+    ...theme.typography.h4,
+    color: theme.colors.text,
+  } as TextStyle,
   closeButton: {
     padding: 4,
-  },
+  } as ViewStyle,
   listContent: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  } as ViewStyle,
   optionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    borderRadius: theme.roundness.md,
+    marginBottom: 4,
+  } as ViewStyle,
   optionRowSelected: {
-    backgroundColor: '#eff6ff',
-  },
+    backgroundColor: theme.colors.primaryLight,
+  } as ViewStyle,
   optionText: {
-    fontSize: 16,
-    color: '#334155',
-  },
+    ...theme.typography.bodyMedium,
+    color: theme.colors.textSecondary,
+  } as TextStyle,
   optionTextSelected: {
-    color: '#2563eb',
-    fontWeight: '600',
-  },
+    color: theme.colors.primary,
+    fontWeight: '700',
+  } as TextStyle,
 });

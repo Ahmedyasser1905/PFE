@@ -9,12 +9,276 @@ import {
     StatusBar,
     ActivityIndicator,
     RefreshControl,
+    ViewStyle,
+    TextStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Crown, Calendar, Cpu, BarChart3, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '~/constants/theme';
 import { useSubscription } from '~/hooks/useSubscription';
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    } as ViewStyle,
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: theme.colors.text,
+    } as TextStyle,
+    scroll: {
+        padding: theme.spacing.lg,
+        paddingBottom: 80,
+    } as ViewStyle,
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    } as ViewStyle,
+    loadingText: {
+        marginTop: 12,
+        color: theme.colors.textSecondary,
+        fontWeight: '500',
+    } as TextStyle,
+
+    // No subscription
+    noSubCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 32,
+        alignItems: 'center',
+        gap: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 3,
+    } as ViewStyle,
+    noSubTitle: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#0f172a',
+    } as TextStyle,
+    noSubDesc: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 21,
+        marginBottom: 8,
+    } as TextStyle,
+
+    // Plan card
+    planCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 3,
+        marginBottom: 32,
+    } as ViewStyle,
+    planTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    } as ViewStyle,
+    currentPlanLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: theme.colors.primary,
+        letterSpacing: 0.8,
+    } as TextStyle,
+    activeBadge: {
+        backgroundColor: theme.colors.successLight,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 20,
+    } as ViewStyle,
+    activeBadgeText: {
+        color: theme.colors.success,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    } as TextStyle,
+    inactiveBadge: {
+        backgroundColor: theme.colors.warningLight,
+    } as ViewStyle,
+    inactiveBadgeText: {
+        color: theme.colors.warning,
+    } as TextStyle,
+    planName: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#0f172a',
+        marginBottom: 8,
+    } as TextStyle,
+    planDesc: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        lineHeight: 21,
+        marginBottom: 20,
+    } as TextStyle,
+    divider: {
+        height: 1,
+        backgroundColor: theme.colors.divider,
+        marginBottom: 16,
+    } as ViewStyle,
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    } as ViewStyle,
+    infoRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    } as ViewStyle,
+    infoKey: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        fontWeight: '500',
+    } as TextStyle,
+    infoValue: {
+        fontSize: 14,
+        color: theme.colors.text,
+        fontWeight: '500',
+    } as TextStyle,
+    infoValueBold: {
+        fontWeight: '700',
+    } as TextStyle,
+    switchBtn: {
+        backgroundColor: theme.colors.primary,
+        flexDirection: 'row',
+        height: 52,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 4,
+    } as ViewStyle,
+    switchBtnText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '700',
+    } as TextStyle,
+
+    // Usage section
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#94a3b8',
+        letterSpacing: 1,
+        marginBottom: 14,
+    } as TextStyle,
+    usageCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        gap: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    } as ViewStyle,
+    usageRow: {
+        gap: 8,
+    } as ViewStyle,
+    usageLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    } as ViewStyle,
+    usageLabel: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#334155',
+    } as TextStyle,
+    usageCount: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: theme.colors.primary,
+    } as TextStyle,
+    usageTrack: {
+        height: 8,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 4,
+        overflow: 'hidden',
+    } as ViewStyle,
+    usageFill: {
+        height: '100%',
+        backgroundColor: theme.colors.primary,
+        borderRadius: 4,
+    } as ViewStyle,
+    usageFillHigh: {
+        backgroundColor: '#f59e0b',
+    } as ViewStyle,
+
+    // Tiles
+    tile: {
+        width: '47.5%',
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 18,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    } as ViewStyle,
+    tileIconRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    } as ViewStyle,
+    tileLabel: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        fontWeight: '500',
+    } as TextStyle,
+    tileValue: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#0f172a',
+    } as TextStyle,
+
+    // Error
+    errorCard: {
+        backgroundColor: '#fef2f2',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: '#fee2e2',
+    } as ViewStyle,
+    errorText: {
+        color: '#991b1b',
+        fontSize: 13,
+        fontWeight: '500',
+        textAlign: 'center',
+    } as TextStyle,
+});
 
 // ─── Reusable stat tile ───────────────────────────────────────────────────────
 type StatTileProps = {
@@ -68,14 +332,7 @@ export default function ActivePlanScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                        <ArrowLeft size={22} color={theme.colors.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>My Subscription</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+            <SafeAreaView style={styles.container} edges={['bottom']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={theme.colors.primary} />
                     <Text style={styles.loadingText}>Loading subscription...</Text>
@@ -85,20 +342,7 @@ export default function ActivePlanScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backBtn}
-                    activeOpacity={0.7}
-                >
-                    <ArrowLeft size={22} color={theme.colors.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Subscription</Text>
-                <View style={{ width: 40 }} />
-            </View>
-
+        <SafeAreaView style={styles.container} edges={['bottom']}>
             <ScrollView
                 contentContainerStyle={styles.scroll}
                 showsVerticalScrollIndicator={false}
@@ -109,7 +353,7 @@ export default function ActivePlanScreen() {
                 {!hasSubscription ? (
                     /* ── No Subscription State ── */
                     <View style={styles.noSubCard}>
-                        <Crown size={48} color={theme.colors.muted} />
+                        <Crown size={48} color={theme.colors.textMuted} />
                         <Text style={styles.noSubTitle}>No Active Plan</Text>
                         <Text style={styles.noSubDesc}>
                             Subscribe to a plan to unlock projects, AI assistance, and estimation tools.
@@ -216,277 +460,3 @@ export default function ActivePlanScreen() {
         </SafeAreaView>
     );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8fafc',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: theme.spacing.lg,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 10 : 0,
-        paddingBottom: 14,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-    },
-    backBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f1f5f9',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: theme.colors.text,
-    },
-    scroll: {
-        padding: theme.spacing.lg,
-        paddingBottom: 80,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: 12,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
-
-    // No subscription
-    noSubCard: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 32,
-        alignItems: 'center',
-        gap: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-        elevation: 3,
-    },
-    noSubTitle: {
-        fontSize: 22,
-        fontWeight: '900',
-        color: '#0f172a',
-    },
-    noSubDesc: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        lineHeight: 21,
-        marginBottom: 8,
-    },
-
-    // Plan card
-    planCard: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-        elevation: 3,
-        marginBottom: 32,
-    },
-    planTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    currentPlanLabel: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: theme.colors.primary,
-        letterSpacing: 0.8,
-    },
-    activeBadge: {
-        backgroundColor: '#dcfce7',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 20,
-    },
-    activeBadgeText: {
-        color: '#16a34a',
-        fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    inactiveBadge: {
-        backgroundColor: '#fef3c7',
-    },
-    inactiveBadgeText: {
-        color: '#d97706',
-    },
-    planName: {
-        fontSize: 24,
-        fontWeight: '900',
-        color: '#0f172a',
-        marginBottom: 8,
-    },
-    planDesc: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        lineHeight: 21,
-        marginBottom: 20,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#f1f5f9',
-        marginBottom: 16,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    infoRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    infoKey: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
-    infoValue: {
-        fontSize: 14,
-        color: theme.colors.text,
-        fontWeight: '500',
-    },
-    infoValueBold: {
-        fontWeight: '700',
-    },
-    switchBtn: {
-        backgroundColor: theme.colors.primary,
-        flexDirection: 'row',
-        height: 52,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 4,
-    },
-    switchBtnText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '700',
-    },
-
-    // Usage section
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#94a3b8',
-        letterSpacing: 1,
-        marginBottom: 14,
-    },
-    usageCard: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        gap: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-    },
-    usageRow: {
-        gap: 8,
-    },
-    usageLabelRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    usageLabel: {
-        flex: 1,
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#334155',
-    },
-    usageCount: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: theme.colors.primary,
-    },
-    usageTrack: {
-        height: 8,
-        backgroundColor: '#f1f5f9',
-        borderRadius: 4,
-        overflow: 'hidden',
-    },
-    usageFill: {
-        height: '100%',
-        backgroundColor: theme.colors.primary,
-        borderRadius: 4,
-    },
-    usageFillHigh: {
-        backgroundColor: '#f59e0b',
-    },
-
-    // Tiles
-    tile: {
-        width: '47.5%',
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 18,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.04,
-        shadowRadius: 10,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-    },
-    tileIconRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    tileLabel: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
-    tileValue: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#0f172a',
-    },
-
-    // Error
-    errorCard: {
-        backgroundColor: '#fef2f2',
-        borderRadius: 12,
-        padding: 16,
-        marginTop: 16,
-        borderWidth: 1,
-        borderColor: '#fee2e2',
-    },
-    errorText: {
-        color: '#991b1b',
-        fontSize: 13,
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-});

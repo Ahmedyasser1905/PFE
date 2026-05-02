@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { CheckCircle, Building2, Calendar } from 'lucide-react-native';
 import type { Project } from '~/api/types';
+import { theme } from '~/constants/theme';
 import { resolveImageUrl, FALLBACK_IMAGE } from '~/utils/imageResolver';
 
 interface CardProps {
@@ -39,7 +40,6 @@ export const ProjectCard: React.FC<CardProps> = ({ project }) => {
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => router.push(`/projects/${project.projectId}`)}
     >
-      
       {/* IMAGE */}
       <View style={styles.imageContainer}>
         <Image 
@@ -56,7 +56,7 @@ export const ProjectCard: React.FC<CardProps> = ({ project }) => {
         <View
           style={[
             styles.badge,
-            { backgroundColor: isActive ? '#3b82f6' : '#10b981' }
+            { backgroundColor: isActive ? theme.colors.primary : theme.colors.success }
           ]}
         >
           {isActive ? (
@@ -66,7 +66,7 @@ export const ProjectCard: React.FC<CardProps> = ({ project }) => {
             </>
           ) : (
             <>
-              <CheckCircle size={14} color="#fff" />
+              <CheckCircle size={12} color="#fff" />
               <Text style={styles.badgeText}>COMPLETED</Text>
             </>
           )}
@@ -75,11 +75,12 @@ export const ProjectCard: React.FC<CardProps> = ({ project }) => {
 
       {/* CONTENT */}
       <View style={styles.content}>
-        
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
-          <Text style={styles.uuid}>ID: {project.projectId.slice(0, 8)}</Text>
+          <View style={styles.idBadge}>
+            <Text style={styles.uuid}>{project.projectId.slice(0, 8)}</Text>
+          </View>
         </View>
 
         {/* DESCRIPTION */}
@@ -89,121 +90,117 @@ export const ProjectCard: React.FC<CardProps> = ({ project }) => {
 
         {/* FOOTER */}
         <View style={styles.footer}>
-          
           <View style={styles.row}>
-            <Building2 size={14} color="#94a3b8" />
+            <Building2 size={13} color={theme.colors.textMuted} />
             <Text style={styles.footerText}>{clientName}</Text>
           </View>
 
           <View style={styles.row}>
-            <Calendar size={14} color="#94a3b8" />
-            <Text style={styles.footerText}>Created {displayDate}</Text>
+            <Calendar size={13} color={theme.colors.textMuted} />
+            <Text style={styles.footerText}>{displayDate}</Text>
           </View>
-
         </View>
       </View>
-
     </Pressable>
   );
 };
 
-// STYLES
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.roundness.xl,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#f1f5f9'
+    borderColor: theme.colors.border,
+    ...theme.shadows.sm,
   },
   cardPressed: {
-    opacity: 0.85,
+    opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
-
   imageContainer: {
-    height: 180,
-    position: 'relative'
+    height: 160,
+    position: 'relative',
+    backgroundColor: theme.colors.surfaceSecondary,
   },
-
   image: {
     width: '100%',
-    height: '100%'
+    height: '100%',
   },
-
   badge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 4
+    paddingVertical: 5,
+    borderRadius: theme.roundness.full,
+    gap: 5,
+    ...theme.shadows.xs,
   },
-
   badgeText: {
     color: '#fff',
     fontSize: 10,
-    fontWeight: 'bold'
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-
   dot: {
     width: 6,
     height: 6,
     backgroundColor: '#fff',
-    borderRadius: 3
+    borderRadius: 3,
   },
-
   content: {
-    padding: 14
+    padding: theme.spacing.lg,
   },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6
+    marginBottom: 8,
+    gap: theme.spacing.sm,
   },
-
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    flex: 1
+    ...theme.typography.h4,
+    color: theme.colors.text,
+    flex: 1,
   },
-
+  idBadge: {
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   uuid: {
+    ...theme.typography.caption,
     fontSize: 10,
-    color: '#94a3b8',
-    marginLeft: 8
+    color: theme.colors.textMuted,
+    fontWeight: '700',
   },
-
   description: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 12,
-    lineHeight: 18
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 18,
   },
-
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 10
+    borderTopColor: theme.colors.divider,
+    paddingTop: 12,
+    marginTop: 4,
   },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4
+    gap: 6,
   },
-
   footerText: {
-    fontSize: 11,
-    color: '#64748b'
-  }
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
 });

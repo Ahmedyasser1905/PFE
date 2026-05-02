@@ -68,57 +68,60 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
 };
 const styles = StyleSheet.create({
     baseButton: {
-        height: 52,
-        borderRadius: theme.roundness.md,
+        height: 54,
+        borderRadius: theme.roundness.lg,
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
         paddingHorizontal: theme.spacing.lg,
-    },
+    } as ViewStyle,
     content: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-    },
+    } as ViewStyle,
     primaryButton: {
         backgroundColor: theme.colors.primary,
-    },
+        ...theme.shadows.sm,
+    } as ViewStyle,
     secondaryButton: {
         backgroundColor: theme.colors.surface,
-    },
+    } as ViewStyle,
     outlineButton: {
         backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: theme.colors.primary,
-    },
+        borderWidth: 1.5,
+        borderColor: theme.colors.border,
+    } as ViewStyle,
     ghostButton: {
         backgroundColor: 'transparent',
-    },
+    } as ViewStyle,
     disabledButton: {
-        opacity: 0.6,
-    },
+        opacity: 0.5,
+        shadowOpacity: 0,
+        elevation: 0,
+    } as ViewStyle,
     baseText: {
-        fontSize: 16,
-        fontWeight: '700',
-    },
+        ...theme.typography.bodyBold,
+        letterSpacing: 0.2,
+    } as TextStyle,
     primaryText: {
-        color: 'white',
-    },
+        color: theme.colors.white,
+    } as TextStyle,
     secondaryText: {
         color: theme.colors.text,
-    },
+    } as TextStyle,
     outlineText: {
-        color: theme.colors.primary,
-    },
+        color: theme.colors.textSecondary,
+    } as TextStyle,
     ghostText: {
         color: theme.colors.primary,
-    },
+    } as TextStyle,
     iconLeft: {
-        marginRight: 8,
-    },
+        marginRight: 10,
+    } as ViewStyle,
     iconRight: {
-        marginLeft: 8,
-    },
+        marginLeft: 10,
+    } as ViewStyle,
 });
 
 

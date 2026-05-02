@@ -26,9 +26,15 @@ interface SubscriptionContextType {
   canCreateProject: boolean;
   /** True if user can perform more calculations (under limit or unlimited) */
   canCalculate: boolean;
+  /** True if user can send another AI expert request (under limit or unlimited) */
+  canUseAI: boolean;
+  /** Remaining AI requests for the current period (-1 = unlimited, 0 = blocked) */
+  remainingAIRequests: number;
   refresh: () => Promise<void>;
   /** Increment usage locally after a calculation */
   incrementCalculationUsage: () => void;
+  /** Increment usage locally after a successful AI request */
+  incrementAIUsage: () => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -36,7 +42,7 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   // Only fetch subscription data when user is authenticated
-  const { subscription, usage, loading, error, hasSubscription, refresh, incrementCalculationUsage } = useSubscription();
+  const { subscription, usage, loading, error, hasSubscription, refresh, incrementCalculationUsage, incrementAIUsage } = useSubscription();
 
   const isSubscriptionActive = useMemo(() => {
     if (!subscription) return false;
@@ -87,6 +93,26 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return !isBlocked;
   }, [subscription, usage]);
 
+  // ─── AI usage gate ──────────────────────────────────────────────────────────
+  // Mirrors `canCalculate` but reads `aiUsageLimit`. Returns true when the
+  // user has remaining AI requests OR when the limit is unresolved/unlimited.
+  const canUseAI = useMemo(() => {
+    if (!subscription) return true;            // no sub info -> allow (server still gates)
+    if (!subscription.isActive) return false;  // inactive sub -> block
+    if (!usage) return true;                   // no usage data -> allow
+    const { used, limit } = usage.aiUsageLimit;
+    if (limit === -1) return true;             // unlimited
+    if (limit === 0) return true;              // unresolved -> allow
+    return used < limit;
+  }, [subscription, usage]);
+
+  const remainingAIRequests = useMemo(() => {
+    if (!usage) return -1;                     // unknown -> treat as unlimited for UI
+    const { used, limit } = usage.aiUsageLimit;
+    if (limit === -1 || limit === 0) return -1;
+    return Math.max(0, limit - used);
+  }, [usage]);
+
   const value = useMemo(
     () => ({
       subscription,
@@ -97,10 +123,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       isSubscriptionActive,
       canCreateProject,
       canCalculate,
+      canUseAI,
+      remainingAIRequests,
       refresh,
       incrementCalculationUsage,
+      incrementAIUsage,
     }),
-    [subscription, usage, loading, error, hasSubscription, isSubscriptionActive, canCreateProject, canCalculate, refresh, incrementCalculationUsage]
+    [subscription, usage, loading, error, hasSubscription, isSubscriptionActive, canCreateProject, canCalculate, canUseAI, remainingAIRequests, refresh, incrementCalculationUsage, incrementAIUsage]
   );
 
   return (
@@ -123,8 +152,11 @@ export const useSubscriptionContext = (): SubscriptionContextType => {
       isSubscriptionActive: false,
       canCreateProject: true,
       canCalculate: true,
+      canUseAI: true,
+      remainingAIRequests: -1,
       refresh: async () => {},
       incrementCalculationUsage: () => {},
+      incrementAIUsage: () => {},
     };
   }
   return context;

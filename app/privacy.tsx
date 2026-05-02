@@ -1,21 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Shield } from 'lucide-react-native';
+import { Shield } from 'lucide-react-native';
 import { theme } from '~/constants/theme';
 import { useLanguage } from '~/context/LanguageContext';
+import BackButton from '~/components/common/BackButton';
 
 export default function PrivacyScreen() {
-  const router = useRouter();
   const { t, isRTL } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={[styles.header, isRTL && { flexDirection: 'row-reverse' }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={22} color="#0F172A" />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.title}>{t('settings.privacy') || 'Privacy Policy'}</Text>
         <View style={{ width: 44 }} />
       </View>
@@ -70,7 +67,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#0F172A' },
   content: { padding: 24, alignItems: 'center' },
   iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },

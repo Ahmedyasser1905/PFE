@@ -1,8 +1,7 @@
 import axios from 'axios';
 import type { AuthResponse, User } from './types';
 import { mapUserFromAPI } from './mappers';
-import { API_URLS, STORAGE_KEYS } from '~/constants/config';
-import { storage } from '~/utils/storage';
+import { detectBaseUrl } from '~/utils/network';
 
 /**
  * A clean axios instance for auth-related calls (login, refresh, etc.)
@@ -15,35 +14,10 @@ const authClient = axios.create({
     },
 });
 
-// ─── Base URL Resolution (runs ONCE, cached) ────────────────────────────────
-let resolvedBaseUrl: string | null = null;
-let baseUrlPromise: Promise<string> | null = null;
-
-const getAuthBaseUrl = (): Promise<string> => {
-    if (resolvedBaseUrl) return Promise.resolve(resolvedBaseUrl);
-    if (baseUrlPromise) return baseUrlPromise;
-
-    baseUrlPromise = (async () => {
-        // 1. Check for user-saved custom URL (from settings screen)
-        try {
-            const customUrl = await storage.getItem(STORAGE_KEYS.CUSTOM_SERVER_URL);
-            if (customUrl) {
-                console.log('[AuthAPI] Using custom server URL:', customUrl);
-                resolvedBaseUrl = customUrl;
-                return customUrl;
-            }
-        } catch {}
-
-        // 2. React Native Environment Resolution
-        const url = __DEV__ ? API_URLS.DEVELOPMENT : API_URLS.PRODUCTION;
-
-        console.log(`[AuthAPI] Resolved baseURL (__DEV__=${__DEV__}):`, url);
-        resolvedBaseUrl = url;
-        return url;
-    })();
-
-    return baseUrlPromise;
-};
+// ─── Base URL Resolution ──────────────────────────────────────────────────────
+// Shared with api.ts via the network utility — both axios instances always
+// agree on which host they're talking to.
+const getAuthBaseUrl = (): Promise<string> => detectBaseUrl();
 
 
 // ─── Request Interceptor: ensure baseURL set before every request ────────────

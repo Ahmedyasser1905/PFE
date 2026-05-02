@@ -1,12 +1,169 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation,
-  Platform, UIManager, Linking
+  Platform, UIManager, Linking, ViewStyle, TextStyle
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronDown, ChevronUp, HelpCircle, MessageCircle, Mail, Phone } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { theme } from '~/constants/theme';
 import { useLanguage } from '~/context/LanguageContext';
+
+const styles = StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.colors.background 
+  } as ViewStyle,
+
+  rtlRow: { flexDirection: 'row-reverse' } as ViewStyle,
+
+  scroll: { 
+    padding: theme.spacing.lg, 
+    paddingBottom: 60 
+  } as ViewStyle,
+
+  hero: { 
+    alignItems: 'center', 
+    marginBottom: theme.spacing.xxl 
+  } as ViewStyle,
+  heroIcon: {
+    width: 80, 
+    height: 80, 
+    borderRadius: 40,
+    backgroundColor: theme.colors.primaryLight, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
+  heroTitle: { 
+    ...theme.typography.h2,
+    color: theme.colors.text, 
+    marginBottom: 8 
+  } as TextStyle,
+  heroSub: { 
+    ...theme.typography.body,
+    color: theme.colors.textSecondary, 
+    textAlign: 'center', 
+    lineHeight: 22, 
+    paddingHorizontal: 10 
+  } as TextStyle,
+
+  sectionLabel: {
+    ...theme.typography.caption,
+    fontWeight: '900', 
+    color: theme.colors.textMuted,
+    letterSpacing: 1.5, 
+    marginBottom: theme.spacing.md, 
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  } as TextStyle,
+
+  accordionCard: {
+    backgroundColor: theme.colors.white, 
+    borderRadius: theme.roundness.xl,
+    borderWidth: 1, 
+    borderColor: theme.colors.divider,
+    overflow: 'hidden', 
+    marginBottom: theme.spacing.xl,
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  accordionItem: { padding: 0 } as ViewStyle,
+  accordionBorder: { 
+    borderTopWidth: 1, 
+    borderColor: theme.colors.divider 
+  } as ViewStyle,
+  accordionHeader: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg, 
+    paddingVertical: theme.spacing.lg, 
+    gap: theme.spacing.md,
+  } as ViewStyle,
+  accordionLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.md, 
+    flex: 1 
+  } as ViewStyle,
+  questionNum: {
+    width: 28, 
+    height: 28, 
+    borderRadius: 14,
+    backgroundColor: theme.colors.primaryLight, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    flexShrink: 0,
+  } as ViewStyle,
+  questionNumText: { 
+    ...theme.typography.small,
+    fontWeight: '800', 
+    color: theme.colors.primary 
+  } as TextStyle,
+  questionText: { 
+    ...theme.typography.bodyBold,
+    color: theme.colors.text, 
+    flex: 1, 
+    lineHeight: 20 
+  } as TextStyle,
+  accordionBody: {
+    paddingHorizontal: theme.spacing.lg, 
+    paddingBottom: theme.spacing.lg, 
+    paddingTop: 0,
+    paddingLeft: 60,
+  } as ViewStyle,
+  answerText: { 
+    ...theme.typography.body,
+    color: theme.colors.textSecondary, 
+    lineHeight: 22 
+  } as TextStyle,
+
+  contactCard: {
+    backgroundColor: theme.colors.white, 
+    borderRadius: theme.roundness.xl,
+    borderWidth: 1, 
+    borderColor: theme.colors.divider,
+    overflow: 'hidden', 
+    marginBottom: theme.spacing.xl,
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  contactRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.md, 
+    padding: theme.spacing.lg 
+  } as ViewStyle,
+  contactDivider: { 
+    height: 1, 
+    backgroundColor: theme.colors.divider, 
+    marginHorizontal: theme.spacing.lg 
+  } as ViewStyle,
+  contactIcon: { 
+    width: 48, 
+    height: 48, 
+    borderRadius: theme.roundness.md, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  } as ViewStyle,
+  contactInfo: { flex: 1 } as ViewStyle,
+  contactTitle: { 
+    ...theme.typography.bodyBold,
+    color: theme.colors.text, 
+    marginBottom: 2 
+  } as TextStyle,
+  contactSub: { 
+    ...theme.typography.small,
+    color: theme.colors.textSecondary 
+  } as TextStyle,
+
+  version: { 
+    textAlign: 'center', 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted, 
+    fontWeight: '700', 
+    marginTop: 8 
+  } as TextStyle,
+});
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -65,8 +222,8 @@ function AccordionItem({ item, index }: { item: typeof FAQ_ITEMS[0]; index: numb
           <Text style={styles.questionText}>{item.q}</Text>
         </View>
         {open
-          ? <ChevronUp size={18} color="#2563EB" />
-          : <ChevronDown size={18} color="#94A3B8" />
+          ? <ChevronUp size={18} color={theme.colors.primary} />
+          : <ChevronDown size={18} color={theme.colors.textMuted} />
         }
       </TouchableOpacity>
       {open && (
@@ -84,21 +241,13 @@ export default function HelpScreen() {
   const isArabic = language === 'ar';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, isArabic && styles.rtlRow]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={22} color="#0F172A" style={{ transform: [{ scaleX: isArabic ? -1 : 1 }] }} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Help & Support</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <HelpCircle size={36} color="#2563EB" />
+            <HelpCircle size={36} color={theme.colors.primary} />
           </View>
           <Text style={styles.heroTitle}>How can we help?</Text>
           <Text style={styles.heroSub}>Find answers to common questions below, or reach out to our support team.</Text>
@@ -119,8 +268,8 @@ export default function HelpScreen() {
             style={styles.contactRow}
             onPress={() => Linking.openURL('mailto:support@buildest.dz')}
           >
-            <View style={[styles.contactIcon, { backgroundColor: '#EFF6FF' }]}>
-              <Mail size={20} color="#2563EB" />
+            <View style={[styles.contactIcon, { backgroundColor: theme.colors.infoLight }]}>
+              <Mail size={20} color={theme.colors.info} />
             </View>
             <View style={styles.contactInfo}>
               <Text style={styles.contactTitle}>Email Us</Text>
@@ -134,8 +283,8 @@ export default function HelpScreen() {
             style={styles.contactRow}
             onPress={() => Linking.openURL('https://wa.me/213XXXXXXXXX')}
           >
-            <View style={[styles.contactIcon, { backgroundColor: '#ECFDF5' }]}>
-              <MessageCircle size={20} color="#059669" />
+            <View style={[styles.contactIcon, { backgroundColor: theme.colors.successLight }]}>
+              <MessageCircle size={20} color={theme.colors.success} />
             </View>
             <View style={styles.contactInfo}>
               <Text style={styles.contactTitle}>WhatsApp</Text>
@@ -144,79 +293,9 @@ export default function HelpScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>BuildEst © 2024 — v1.0.0</Text>
+        <Text style={styles.version}>BuildEst © 2026 — v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#E2E8F0',
-  },
-  rtlRow: { flexDirection: 'row-reverse' },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center',
-  },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-
-  scroll: { padding: 20, paddingBottom: 60 },
-
-  hero: { alignItems: 'center', marginBottom: 32 },
-  heroIcon: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
-    marginBottom: 14,
-  },
-  heroTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A', marginBottom: 8 },
-  heroSub: { fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 21, paddingHorizontal: 10 },
-
-  sectionLabel: {
-    fontSize: 11, fontWeight: '800', color: '#94A3B8',
-    letterSpacing: 1.2, marginBottom: 12, marginLeft: 4,
-  },
-
-  accordionCard: {
-    backgroundColor: '#fff', borderRadius: 20,
-    borderWidth: 1, borderColor: '#E2E8F0',
-    overflow: 'hidden', marginBottom: 24,
-  },
-  accordionItem: { padding: 0 },
-  accordionBorder: { borderTopWidth: 1, borderColor: '#F1F5F9' },
-  accordionHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingVertical: 16, gap: 12,
-  },
-  accordionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  questionNum: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  questionNumText: { fontSize: 12, fontWeight: '800', color: '#2563EB' },
-  questionText: { fontSize: 14, fontWeight: '700', color: '#0F172A', flex: 1, lineHeight: 20 },
-  accordionBody: {
-    paddingHorizontal: 18, paddingBottom: 18, paddingTop: 0,
-    paddingLeft: 56,
-  },
-  answerText: { fontSize: 14, color: '#475569', lineHeight: 22 },
-
-  contactCard: {
-    backgroundColor: '#fff', borderRadius: 20,
-    borderWidth: 1, borderColor: '#E2E8F0',
-    overflow: 'hidden', marginBottom: 24,
-  },
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
-  contactDivider: { height: 1, backgroundColor: '#F1F5F9', marginHorizontal: 18 },
-  contactIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  contactInfo: { flex: 1 },
-  contactTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 2 },
-  contactSub: { fontSize: 13, color: '#64748B' },
-
-  version: { textAlign: 'center', fontSize: 12, color: '#CBD5E1', fontWeight: '600', marginTop: 8 },
-});

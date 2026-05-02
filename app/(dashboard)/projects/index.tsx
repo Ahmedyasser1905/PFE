@@ -7,6 +7,10 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -23,6 +27,156 @@ import { formatCurrency, formatProjectId } from '~/utils/formatters';
 import { Skeleton } from '~/components/ui/Skeleton';
 import { EmptyState } from '~/components/ui/EmptyState';
 import { ErrorScreen } from '~/components/ui/ErrorScreen';
+import { resolveImageUrl, FALLBACK_IMAGE } from '~/utils/imageResolver';
+
+const styles = StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.colors.background 
+  } as ViewStyle,
+  center: { 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  } as ViewStyle,
+  scrollContent: { 
+    padding: theme.spacing.lg, 
+    paddingBottom: 100 
+  } as ViewStyle,
+  scrollContentEmpty: { 
+    flex: 1, 
+    justifyContent: 'center' 
+  } as ViewStyle,
+
+  filterTabs: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    padding: 4,
+    borderRadius: theme.roundness.lg,
+    marginBottom: theme.spacing.lg,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+  } as ViewStyle,
+  filterTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: theme.roundness.md,
+  } as ViewStyle,
+  filterTabActive: {
+    backgroundColor: theme.colors.white,
+    ...theme.shadows.xs,
+  } as ViewStyle,
+  filterTabText: { 
+    ...theme.typography.small,
+    fontWeight: '700', 
+    color: theme.colors.textSecondary 
+  } as TextStyle,
+  filterTabTextActive: { 
+    color: theme.colors.primary 
+  } as TextStyle,
+
+  loadingText: { 
+    ...theme.typography.body,
+    color: theme.colors.textSecondary, 
+    marginTop: 12,
+  } as TextStyle,
+
+  projectCard: {
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.lg,
+    borderRadius: theme.roundness.xl,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    ...theme.shadows.sm,
+  } as ViewStyle,
+  projectCardPressed: { 
+    backgroundColor: theme.colors.surface, 
+    borderColor: theme.colors.primaryLight 
+  } as ViewStyle,
+  projectCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.roundness.md,
+    backgroundColor: theme.colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  } as ViewStyle,
+  projectImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  statusBadge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: theme.roundness.sm 
+  } as ViewStyle,
+  statusText: { 
+    ...theme.typography.caption,
+    fontWeight: '800', 
+    letterSpacing: 0.5, 
+    color: theme.colors.white 
+  } as TextStyle,
+  projectName: { 
+    ...theme.typography.h3,
+    color: theme.colors.text,
+    marginBottom: 4,
+  } as TextStyle,
+  projectDesc: { 
+    ...theme.typography.small,
+    color: theme.colors.textSecondary, 
+    lineHeight: 20, 
+    marginBottom: theme.spacing.md 
+  } as TextStyle,
+  projectStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  } as ViewStyle,
+  projectStat: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: theme.spacing.xs 
+  } as ViewStyle,
+  projectStatText: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontWeight: '700',
+  } as TextStyle,
+  projectCost: { 
+    ...theme.typography.bodyBold,
+    color: theme.colors.primary,
+  } as TextStyle,
+  projectFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
+  } as ViewStyle,
+  projectId: { 
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontWeight: '800', 
+    letterSpacing: 0.5 
+  } as TextStyle,
+  mb12: { marginBottom: 12 } as ViewStyle,
+  mb6: { marginBottom: 6 } as ViewStyle,
+  mb20: { marginBottom: 20 } as ViewStyle,
+  loadingCard: { height: 160, marginBottom: 12 } as ViewStyle,
+  badgeSuccess: { backgroundColor: theme.colors.success } as ViewStyle,
+  badgePrimary: { backgroundColor: theme.colors.primaryLight } as ViewStyle,
+});
 
 type TabType = 'active' | 'completed';
 
@@ -56,12 +210,24 @@ export default function ProjectsScreen() {
         >
           <View style={styles.projectCardTop}>
             <View style={styles.iconBox}>
-              <HardHat size={22} color={theme.colors.primary} />
+              {project.imageUrl ? (
+                <Image
+                  source={{ uri: resolveImageUrl(project.imageUrl) }}
+                  style={styles.projectImage}
+                  resizeMode="cover"
+                  defaultSource={{ uri: FALLBACK_IMAGE }}
+                  onError={() => {
+                    if (__DEV__) console.log('[ProjectsList] image load failed for', project.projectId, project.imageUrl);
+                  }}
+                />
+              ) : (
+                <HardHat size={22} color={theme.colors.primary} />
+              )}
             </View>
             <View
               style={[
                 styles.statusBadge,
-                { backgroundColor: isCompleted ? theme.colors.success : theme.colors.primaryLight },
+                isCompleted ? styles.badgeSuccess : styles.badgePrimary,
               ]}
             >
               <Text style={styles.statusText}>
@@ -108,14 +274,14 @@ export default function ProjectsScreen() {
             <Skeleton width="50%" height={40} borderRadius={8} />
           </View>
           {[1, 2, 3, 4].map((key) => (
-            <View key={key} style={[styles.projectCard, { height: 160, marginBottom: 12 }]}>
+            <View key={key} style={[styles.projectCard, styles.loadingCard]}>
                <View style={styles.projectCardTop}>
                  <Skeleton width={44} height={44} borderRadius={12} />
                  <Skeleton width={80} height={24} borderRadius={6} />
                </View>
-               <Skeleton width="70%" height={20} style={{ marginBottom: 12 }} />
-               <Skeleton width="100%" height={14} style={{ marginBottom: 6 }} />
-               <Skeleton width="90%" height={14} style={{ marginBottom: 20 }} />
+               <Skeleton width="70%" height={20} style={styles.mb12} />
+               <Skeleton width="100%" height={14} style={styles.mb6} />
+               <Skeleton width="90%" height={14} style={styles.mb20} />
                <View style={styles.projectFooter}>
                  <Skeleton width={100} height={14} />
                </View>
@@ -204,89 +370,3 @@ export default function ProjectsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.surface },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { padding: 16, paddingBottom: 100 },
-  scrollContentEmpty: { flex: 1, justifyContent: 'center' },
-
-  filterTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    padding: 4,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 4,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  filterTabActive: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  filterTabText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
-  filterTabTextActive: { color: theme.colors.primary },
-
-  loadingText: { marginTop: 12, color: theme.colors.textSecondary, fontWeight: '500' },
-
-  projectCard: {
-    backgroundColor: '#fff',
-    padding: 18,
-    borderRadius: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-  },
-  projectCardPressed: { backgroundColor: theme.colors.surface, borderColor: '#BFDBFE' },
-  projectCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, color: '#fff' },
-  projectName: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 6 },
-  projectDesc: { fontSize: 13, color: theme.colors.textSecondary, lineHeight: 20, marginBottom: 12 },
-  projectStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  projectStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  projectStatText: { fontSize: 12, color: theme.colors.muted, fontWeight: '600' },
-  projectCost: { fontSize: 14, fontWeight: '800', color: theme.colors.primary },
-  projectFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  projectId: { fontSize: 11, color: '#CBD5E1', fontWeight: '700', letterSpacing: 0.5 },
-
-});
